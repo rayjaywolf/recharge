@@ -2,7 +2,10 @@ import { auth, prisma } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CreditCard } from "lucide-react";
+import { CreditCard, ArrowRightLeft, Wallet, AlertCircle, Activity, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 export default async function AdminDashboard() {
   const session = await auth.api.getSession({
@@ -16,49 +19,180 @@ export default async function AdminDashboard() {
     redirect("/retailer");
   }
 
-  const retailersCount = await prisma.user.count({ where: { role: "RETAILER" } });
-  const txCount = await prisma.transaction.count();
+  // Core Vital Signs Fetching
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // 1. Total System Balance (Your Liability)
+  const totalLiabilityResult = await prisma.user.aggregate({
+    _sum: { balance: true },
+    where: { role: "RETAILER" }
+  });
+  const totalLiability = totalLiabilityResult._sum.balance || 0;
+
+  // 2. Today's Transaction Volume (Only completed/successful outbound recharges, ignore wallet drops)
+  const todaysVolumeResult = await prisma.transaction.aggregate({
+    _sum: { amount: true },
+    where: {
+      status: "SUCCESS",
+      createdAt: { gte: todayStart },
+      operator: { not: "MANUAL_CREDIT" } 
+    }
+  });
+  const todaysVolume = todaysVolumeResult._sum.amount || 0;
+
+  // 3. Pending Transactions Alert (Stuck API calls)
+  const pendingTransactions = await prisma.transaction.count({
+    where: { status: "PENDING" }
+  });
+
+  // 4. Success Rate (Calculated from today's resolved non-manual transactions)
+  const todaysResolvedTx = await prisma.transaction.findMany({
+     where: { 
+       createdAt: { gte: todayStart },
+       operator: { not: "MANUAL_CREDIT" },
+       status: { in: ["SUCCESS", "FAILED", "REFUNDED"] }
+     },
+     select: { status: true }
+  });
+  
+  const successCount = todaysResolvedTx.filter(t => t.status === "SUCCESS").length;
+  const totalResolved = todaysResolvedTx.length;
+  const successRate = totalResolved > 0 ? Math.round((successCount / totalResolved) * 100) : 100;
+
+  // Mount the recent transactional flow strictly blocking Manual elements
+  const recentLedger = await prisma.transaction.findMany({
+    where: { operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] } },
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 5
+  });
+
+  // For the manual Funding drop-down
+  const retailersList = await prisma.user.findMany({
+    where: { role: "RETAILER" },
+    select: { id: true, name: true, email: true },
+    orderBy: { createdAt: "desc" }
+  });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Platform Overview</h1>
-        <p className="text-muted-foreground mt-1">Monitor statistics and aggregate activity across the network.</p>
+        <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
+        <p className="text-muted-foreground mt-1">Monitor vital signs, dispute resolutions, and ledger accuracy.</p>
       </div>
       
+      {/* Vital Signs Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Retailers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">System Liability (Wallets)</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{retailersCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Active accounts</p>
+            <div className="text-2xl font-bold tracking-tight">₹{totalLiability.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total owed inside retailer accounts</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Daily Volume (Recharges)</CardTitle>
+            <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{txCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Lifetime recharges</p>
+            <div className="text-2xl font-bold tracking-tight">₹{todaysVolume.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">Successful throughput today</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Transactions</CardTitle>
+            {pendingTransactions > 5 ? (
+              <AlertCircle className="h-4 w-4 text-destructive" />
+            ) : (
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            )}
+          </CardHeader>
+          <CardContent>
+             <div className={`text-2xl font-bold tracking-tight ${pendingTransactions > 5 ? 'text-destructive' : ''}`}>
+              {pendingTransactions}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Aggregator queries in-flight</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Network Health</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold tracking-tight">{successRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Success over {totalResolved} resolved calls</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4">
+      <div className="mt-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Master Ledger (Preview)</CardTitle>
-            <CardDescription>Recent overall transactions will appear here.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
+            <div>
+               <CardTitle>Master Ledger Tracker</CardTitle>
+               <CardDescription className="mt-1">Review the top recent automated transactions scaling across your platform sequentially.</CardDescription>
+            </div>
+            <Link href="/admin/transactions" className="text-sm flex items-center text-primary hover:underline font-medium">
+               View All <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
           </CardHeader>
           <CardContent>
-             <div className="h-32 flex items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-                No recent activity.
+             <div className="rounded-md border bg-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Retailer Origin</TableHead>
+                      <TableHead>Carrier</TableHead>
+                      <TableHead>Target Phone</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>State</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentLedger.length === 0 ? (
+                       <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                          No recent API transactions found today.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                        recentLedger.map((tx) => (
+                          <TableRow key={tx.id}>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                               <div className="flex flex-col">
+                                 <span>{tx.createdAt.toLocaleDateString()}</span>
+                                 <span className="text-xs">{tx.createdAt.toLocaleTimeString()}</span>
+                               </div>
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">{tx.user.name}</TableCell>
+                            <TableCell className="font-semibold">{tx.operator}</TableCell>
+                            <TableCell className="text-muted-foreground font-mono">{tx.targetPhone}</TableCell>
+                            <TableCell className="font-bold">₹{tx.amount.toLocaleString()}</TableCell>
+                            <TableCell>
+                               <div className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-block ${
+                                  tx.status === "SUCCESS" ? "bg-emerald-500/15 text-emerald-700" :
+                                  tx.status === "FAILED" || tx.status === "REFUNDED" ? "bg-red-500/15 text-red-700" :
+                                  "bg-amber-500/15 text-amber-700"
+                               }`}>
+                                 {tx.status}
+                               </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
              </div>
           </CardContent>
         </Card>

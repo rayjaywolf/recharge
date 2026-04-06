@@ -20,6 +20,10 @@ export const auth = betterAuth({
             balance: {
                 type: "number",
                 defaultValue: 0,
+            },
+            isSuspended: {
+                type: "boolean",
+                defaultValue: false,
             }
         }
     },

@@ -30,6 +30,10 @@ export async function POST(req: Request) {
         throw new Error("User not found");
       }
 
+      if (user.isSuspended) {
+        throw new Error("ACCOUNT_SUSPENDED");
+      }
+
       if (user.balance < amount) {
         throw new Error("Insufficient balance");
       }
@@ -97,6 +101,9 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
+    if (error.message === "ACCOUNT_SUSPENDED") {
+      return NextResponse.json({ error: "Your account has been suspended by the administrator." }, { status: 403 });
+    }
     if (error.message === "Insufficient balance") {
       return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
     }

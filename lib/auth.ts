@@ -6,11 +6,23 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+export const prisma = new PrismaClient({ adapter });
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
+    user: {
+        additionalFields: {
+            role: {
+                type: "string",
+                defaultValue: "RETAILER",
+            },
+            balance: {
+                type: "number",
+                defaultValue: 0,
+            }
+        }
+    },
     emailAndPassword: {
         enabled: true,
     },

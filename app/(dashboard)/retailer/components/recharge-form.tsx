@@ -5,22 +5,31 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, Loader2 } from "lucide-react";
+
+const operators = [
+  { value: "JIO", label: "Jio" },
+  { value: "AIRTEL", label: "Airtel" },
+  { value: "VI", label: "Vi (Vodafone Idea)" },
+  { value: "BSNL", label: "BSNL" },
+];
 
 export function RechargeForm() {
     const [phone, setPhone] = useState("");
     const [operator, setOperator] = useState("");
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState<{ text: string, type: "error" | "success" } | null>(null);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setMessage(null);
 
         try {
             const res = await fetch("/api/recharge", {
@@ -34,19 +43,26 @@ export function RechargeForm() {
             });
 
             const data = await res.json();
+            const params = new URLSearchParams({
+                status: res.ok ? "success" : "failed",
+                message: res.ok ? (data.message || "Recharge completed successfully") : (data.error || "Failed to process recharge"),
+                phone,
+                operator,
+                amount,
+                referenceId: data?.transaction?.apiReferenceId || ""
+            });
 
-            if (!res.ok) {
-                setMessage({ text: data.error || "Failed to process recharge", type: "error" });
-            } else {
-                setMessage({ text: data.message || "Recharge successful!", type: "success" });
-                setPhone("");
-                setOperator("");
-                setAmount("");
-                // Refresh the page router data (like the balance tracking Header sitting in the layout above)
-                router.refresh();
-            }
-        } catch (err) {
-            setMessage({ text: "An unexpected error occurred. Please try again.", type: "error" });
+            router.push(`/retailer/recharge/confirmation?${params.toString()}`);
+            router.refresh();
+        } catch {
+            const params = new URLSearchParams({
+                status: "failed",
+                message: "An unexpected error occurred. Please try again.",
+                phone,
+                operator,
+                amount
+            });
+            router.push(`/retailer/recharge/confirmation?${params.toString()}`);
         } finally {
             setLoading(false);
         }
@@ -54,14 +70,6 @@ export function RechargeForm() {
 
     return (
         <form onSubmit={handleSubmit} className="grid gap-4 w-full">
-            {message && (
-                <Alert variant={message.type === "error" ? "destructive" : "default"}>
-                    {message.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                    <AlertTitle>{message.type === "error" ? "Error" : "Success"}</AlertTitle>
-                    <AlertDescription>{message.text}</AlertDescription>
-                </Alert>
-            )}
-            
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone Number</Label>
               <Input
@@ -76,17 +84,32 @@ export function RechargeForm() {
 
             <div className="grid gap-2">
               <Label htmlFor="operator">Operator</Label>
-              <Select value={operator} onValueChange={setOperator} required>
-                <SelectTrigger id="operator">
-                  <SelectValue placeholder="Select an operator" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="JIO">Jio</SelectItem>
-                  <SelectItem value="AIRTEL">Airtel</SelectItem>
-                  <SelectItem value="VI">Vi (Vodafone Idea)</SelectItem>
-                  <SelectItem value="BSNL">BSNL</SelectItem>
-                </SelectContent>
-              </Select>
+              <input type="hidden" name="operator" value={operator} required />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    id="operator"
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between font-normal"
+                  >
+                    {operator
+                      ? operators.find((item) => item.value === operator)?.label
+                      : "Select an operator"}
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {operators.map((item) => (
+                    <DropdownMenuItem
+                      key={item.value}
+                      onSelect={() => setOperator(item.value)}
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="grid gap-2">

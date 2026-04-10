@@ -21,9 +21,8 @@ export function LogoutButton() {
 
   return (
     <Button 
-      variant="ghost" 
+      variant="destructive" 
       size="icon" 
-      className="text-muted-foreground hover:text-foreground" 
       onClick={handleLogout}
       title="Log out"
     >

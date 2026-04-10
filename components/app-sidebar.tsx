@@ -24,8 +24,11 @@ import {
 } from "@/components/ui/sidebar"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
+  const pathname = usePathname()
+
   const navLinks = isAdmin
     ? [
         { name: "Overview", href: "/admin", icon: LayoutDashboard },
@@ -59,9 +62,14 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
           <SidebarMenu>
             {navLinks.map((link) => {
               const Icon = link.icon
+              const isActive =
+                pathname === link.href ||
+                (link.href !== (isAdmin ? "/admin" : "/retailer") &&
+                  pathname.startsWith(`${link.href}/`))
+
               return (
                 <SidebarMenuItem key={link.href}>
-                  <SidebarMenuButton asChild tooltip={link.name}>
+                  <SidebarMenuButton asChild tooltip={link.name} isActive={isActive}>
                     <Link href={link.href}>
                       <Icon />
                       <span>{link.name}</span>

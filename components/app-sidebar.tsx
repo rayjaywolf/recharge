@@ -1,7 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { LayoutDashboard, FileText, Users, Zap, Landmark, History } from "lucide-react"
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  Landmark,
+  History,
+  Wallet,
+  CreditCard,
+} from "lucide-react"
 
 import {
   Sidebar,
@@ -26,11 +34,13 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
         { name: "Master Ledger", href: "/admin/transactions", icon: History },
       ]
     : [
-        { name: "Recharges", href: "/retailer", icon: LayoutDashboard },
+        { name: "Overview", href: "/retailer", icon: LayoutDashboard },
+        { name: "Recharge", href: "/retailer/recharge", icon: CreditCard },
+        { name: "Ledger", href: "/retailer/ledger", icon: FileText },
         {
-          name: "Transaction History",
-          href: "/retailer/history",
-          icon: FileText,
+          name: "Funds",
+          href: "/retailer/funds",
+          icon: Wallet,
         },
       ]
 

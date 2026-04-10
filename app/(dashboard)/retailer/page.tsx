@@ -1,52 +1,273 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-import { RechargeForm } from "./components/recharge-form";
+import { auth, prisma } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle, ArrowUpRight, Clock3, Wallet } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 export default async function RetailerDashboard() {
   const session = await auth.api.getSession({
-    headers: await headers()
-  });
+    headers: await headers(),
+  })
 
-  if (!session) redirect("/login");
+  if (!session) redirect("/login")
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } })
   if (user?.role === "ADMIN") {
-    redirect("/admin");
+    redirect("/admin")
   }
 
+  if (!user) {
+    redirect("/login")
+  }
+
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const [
+    todaysUsage,
+    todaysRechargeCount,
+    todaysResolved,
+    todaysPendingCount,
+    recentTransactions,
+  ] = await Promise.all([
+    prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        userId: user.id,
+        status: "SUCCESS",
+        createdAt: { gte: todayStart },
+        operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] },
+      },
+    }),
+    prisma.transaction.count({
+      where: {
+        userId: user.id,
+        status: "SUCCESS",
+        createdAt: { gte: todayStart },
+        operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        createdAt: { gte: todayStart },
+        operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] },
+        status: { in: ["SUCCESS", "FAILED", "REFUNDED"] },
+      },
+      select: { status: true },
+    }),
+    prisma.transaction.count({
+      where: {
+        userId: user.id,
+        createdAt: { gte: todayStart },
+        status: "PENDING",
+        operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+  ])
+
+  const spentToday = todaysUsage._sum.amount ?? 0
+  const showLowBalanceWarning = user.balance < 500
+  const resolvedCount = todaysResolved.length
+  const successCount = todaysResolved.filter(
+    (tx) => tx.status === "SUCCESS"
+  ).length
+  const successRate =
+    resolvedCount > 0 ? Math.round((successCount / resolvedCount) * 100) : 100
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Retailer Portal</h1>
-        <p className="text-muted-foreground mt-2">Initiate remote recharges and view your personal history.</p>
+        <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
+        <p className="mt-2 text-muted-foreground">
+          Track your wallet and daily recharge activity at a glance.
+        </p>
       </div>
-      
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+
+      {showLowBalanceWarning ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Low balance warning</AlertTitle>
+          <AlertDescription>
+            Your available balance is below ₹500. Contact admin for a top-up.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Quick Recharge</CardTitle>
-            <CardDescription>Enter details below to perform a recharge instantly.</CardDescription>
+            <CardTitle>Available Balance</CardTitle>
+            <CardDescription>
+              Your live wallet balance for recharges.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-             <RechargeForm />
+          <CardContent className="space-y-4">
+            <p className="text-5xl font-extrabold tracking-tight md:text-3xl">
+              ₹{user.balance.toLocaleString()}
+            </p>
+            <div className="h-2 w-full rounded-full bg-muted">
+              <div
+                className="h-2 rounded-full bg-primary transition-all"
+                style={{
+                  width: `${Math.min(100, Math.max(5, Math.round((user.balance / 5000) * 100)))}%`,
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Balance health indicator (₹5,000 reference scale).
+            </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
-            <CardTitle>Recent History</CardTitle>
-            <CardDescription>Your latest transactions</CardDescription>
+            <CardTitle>Today&apos;s Usage</CardTitle>
+            <CardDescription>
+              Spend and completed recharge count today.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <p className="text-3xl font-bold">₹{spentToday.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">
+              spent across {todaysRechargeCount}{" "}
+              {todaysRechargeCount === 1 ? "recharge" : "recharges"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recharge Success Rate</CardTitle>
+            <CardDescription>
+              Based on today&apos;s resolved requests.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <p className="text-2xl font-bold">{successRate}%</p>
+            <p className="text-sm text-muted-foreground">
+              {successCount} successful out of {resolvedCount} resolved
+              recharges
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Pending Recharges
+            </CardTitle>
+            <Clock3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-             <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-                No recent transactions.
-             </div>
+            <p className="text-2xl font-bold">{todaysPendingCount}</p>
+            <p className="text-xs text-muted-foreground">
+              Requests waiting for final status
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Today&apos;s Outflow
+            </CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">₹{spentToday.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">
+              Money moved from wallet today
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Wallet Status</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {showLowBalanceWarning ? "Low" : "Healthy"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {showLowBalanceWarning
+                ? "Balance is below recommended threshold"
+                : "Sufficient balance for regular usage"}
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>Your 5 latest recharge attempts.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">Time</TableHead>
+                <TableHead>Operator</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead className="pr-6">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="h-20 text-center text-muted-foreground"
+                  >
+                    No recent recharge activity found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentTransactions.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell className="pl-6 text-muted-foreground">
+                      {tx.createdAt.toLocaleString()}
+                    </TableCell>
+                    <TableCell>{tx.operator}</TableCell>
+                    <TableCell className="font-mono">
+                      {tx.targetPhone}
+                    </TableCell>
+                    <TableCell>₹{tx.amount.toLocaleString()}</TableCell>
+                    <TableCell className="pr-6">{tx.status}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
-  );
+  )
 }

@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, ArrowUpRight, Clock3, Wallet } from "lucide-react"
+import { AlertCircle, ArrowUpRight, Clock3 } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -117,16 +117,18 @@ export default async function RetailerDashboard() {
         </Alert>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="md:col-span-2 lg:col-span-2">
           <CardHeader>
-            <CardTitle>Available Balance</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              Available Balance
+            </CardTitle>
             <CardDescription>
               Your live wallet balance for recharges.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-5xl font-extrabold tracking-tight md:text-3xl">
+            <p className="text-3xl font-bold tracking-tight">
               ₹{user.balance.toLocaleString()}
             </p>
             <div className="h-2 w-full rounded-full bg-muted">
@@ -145,13 +147,15 @@ export default async function RetailerDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Today&apos;s Usage</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              Today&apos;s Usage
+            </CardTitle>
             <CardDescription>
               Spend and completed recharge count today.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
-            <p className="text-3xl font-bold">₹{spentToday.toLocaleString()}</p>
+            <p className="text-2xl font-bold">₹{spentToday.toLocaleString()}</p>
             <p className="text-sm text-muted-foreground">
               spent across {todaysRechargeCount}{" "}
               {todaysRechargeCount === 1 ? "recharge" : "recharges"}
@@ -161,7 +165,9 @@ export default async function RetailerDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recharge Success Rate</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              Success Rate
+            </CardTitle>
             <CardDescription>
               Based on today&apos;s resolved requests.
             </CardDescription>
@@ -177,7 +183,7 @@ export default async function RetailerDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-base font-medium">
               Pending Recharges
             </CardTitle>
             <Clock3 className="h-4 w-4 text-muted-foreground" />
@@ -192,7 +198,7 @@ export default async function RetailerDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-base font-medium">
               Today&apos;s Outflow
             </CardTitle>
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -201,23 +207,6 @@ export default async function RetailerDashboard() {
             <p className="text-2xl font-bold">₹{spentToday.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">
               Money moved from wallet today
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Wallet Status</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {showLowBalanceWarning ? "Low" : "Healthy"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {showLowBalanceWarning
-                ? "Balance is below recommended threshold"
-                : "Sufficient balance for regular usage"}
             </p>
           </CardContent>
         </Card>

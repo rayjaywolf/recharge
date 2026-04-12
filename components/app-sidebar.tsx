@@ -21,6 +21,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 import Link from "next/link"
@@ -28,6 +29,7 @@ import { usePathname } from "next/navigation"
 
 export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   const navLinks = isAdmin
     ? [
@@ -51,7 +53,9 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex h-14 items-center justify-center border-b border-border px-4 py-0">
         <div className="flex w-full items-center gap-2 text-lg font-bold group-data-[collapsible=icon]:justify-center">
-          <span className="group-data-[collapsible=icon]:hidden">RechargePro</span>
+          <span className="group-data-[collapsible=icon]:hidden">
+            RechargePro
+          </span>
           <span className="hidden group-data-[collapsible=icon]:block">R</span>
         </div>
       </SidebarHeader>
@@ -69,8 +73,19 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 
               return (
                 <SidebarMenuItem key={link.href}>
-                  <SidebarMenuButton asChild tooltip={link.name} isActive={isActive}>
-                    <Link href={link.href}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={link.name}
+                    isActive={isActive}
+                  >
+                    <Link
+                      href={link.href}
+                      onClick={() => {
+                        if (isMobile) {
+                          setOpenMobile(false)
+                        }
+                      }}
+                    >
                       <Icon />
                       <span>{link.name}</span>
                     </Link>

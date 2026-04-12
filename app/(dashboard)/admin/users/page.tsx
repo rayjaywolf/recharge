@@ -1,18 +1,18 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { RetailerTable } from "./components/retailer-table";
+import { auth, prisma } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
+import { RetailerTable } from "./components/retailer-table"
 
 export default async function LedgerPage() {
   const session = await auth.api.getSession({
-    headers: await headers()
-  });
+    headers: await headers(),
+  })
 
-  if (!session) redirect("/login");
+  if (!session) redirect("/login")
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } })
   if (user?.role !== "ADMIN") {
-    redirect("/retailer");
+    redirect("/retailer")
   }
 
   // Fetch all retailers with total transaction counts
@@ -26,22 +26,24 @@ export default async function LedgerPage() {
       isSuspended: true,
       createdAt: true,
       _count: {
-        select: { transactions: true }
-      }
+        select: { transactions: true },
+      },
     },
-    orderBy: { createdAt: "desc" }
-  });
+    orderBy: { createdAt: "desc" },
+  })
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Retailer Directory</h1>
-        <p className="text-muted-foreground mt-1">Manage network access, view wallet balances, and enforce platform security.</p>
+        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+        <p className="mt-1 text-muted-foreground">
+          Manage user accounts and permissions.
+        </p>
       </div>
 
       <div className="mt-8">
         <RetailerTable initialData={retailers} />
       </div>
     </div>
-  );
+  )
 }

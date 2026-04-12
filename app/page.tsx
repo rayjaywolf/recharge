@@ -8,8 +8,29 @@ import {
 } from "@/components/ui/card"
 import { Shield, Store } from "lucide-react"
 import Link from "next/link"
+import { auth, prisma } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
-export default function Page() {
+export default async function Page() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  // If user is authenticated, redirect to appropriate dashboard
+  if (session) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    })
+
+    if (user?.role === "ADMIN") {
+      redirect("/admin")
+    } else {
+      redirect("/retailer")
+    }
+  }
+
+  // Show welcome page for non-authenticated users
   return (
     <div className="flex min-h-svh items-center justify-center p-6">
       <div className="w-full max-w-2xl space-y-8">

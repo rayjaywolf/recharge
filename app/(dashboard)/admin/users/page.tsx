@@ -15,22 +15,32 @@ export default async function LedgerPage() {
     redirect("/retailer")
   }
 
-  // Fetch all retailers with total transaction counts
-  const retailers = await prisma.user.findMany({
-    where: { role: "RETAILER" },
+  // Fetch all non-admin users with total transaction counts
+  const users = await prisma.user.findMany({
+    where: { role: { in: ["RETAILER", "DISTRIBUTOR"] } },
     select: {
       id: true,
       name: true,
       email: true,
+      role: true,
       balance: true,
       isSuspended: true,
       createdAt: true,
+      distributor: {
+        select: { name: true }
+      },
       _count: {
         select: { transactions: true },
       },
     },
     orderBy: { createdAt: "desc" },
   })
+
+  // Fetch distributors for the assignment dropdown
+  const distributors = await prisma.user.findMany({
+    where: { role: "DISTRIBUTOR" },
+    select: { id: true, name: true }
+  });
 
   return (
     <div className="space-y-6">
@@ -42,7 +52,7 @@ export default async function LedgerPage() {
       </div>
 
       <div className="mt-8">
-        <RetailerTable initialData={retailers} />
+        <RetailerTable initialData={users as any} distributors={distributors} />
       </div>
     </div>
   )

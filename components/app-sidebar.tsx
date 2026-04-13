@@ -27,16 +27,24 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
+export function AppSidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
 
-  const navLinks = isAdmin
+  const navLinks = userRole === "ADMIN"
     ? [
         { name: "Overview", href: "/admin", icon: LayoutDashboard },
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Funding", href: "/admin/funding", icon: Landmark },
         { name: "Master Ledger", href: "/admin/transactions", icon: History },
+      ]
+    : userRole === "DISTRIBUTOR"
+    ? [
+        { name: "Overview", href: "/distributor", icon: LayoutDashboard },
+        { name: "Recharge", href: "/distributor/recharge", icon: CreditCard },
+        { name: "Retailers", href: "/distributor/retailers", icon: Users },
+        { name: "Ledger", href: "/distributor/ledger", icon: FileText },
+        { name: "Funds", href: "/distributor/funds", icon: Wallet },
       ]
     : [
         { name: "Overview", href: "/retailer", icon: LayoutDashboard },
@@ -66,10 +74,12 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
           <SidebarMenu>
             {navLinks.map((link) => {
               const Icon = link.icon
+              const baseHref = userRole === "ADMIN" ? "/admin" : userRole === "DISTRIBUTOR" ? "/distributor" : "/retailer"
               const isActive =
                 pathname === link.href ||
-                (link.href !== (isAdmin ? "/admin" : "/retailer") &&
+                (link.href !== baseHref &&
                   pathname.startsWith(`${link.href}/`))
+
 
               return (
                 <SidebarMenuItem key={link.href}>

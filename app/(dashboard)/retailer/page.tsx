@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, ArrowUpRight, Clock3 } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -182,32 +182,26 @@ export default async function RetailerDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader>
             <CardTitle className="text-base font-medium">
               Pending Recharges
             </CardTitle>
-            <Clock3 className="h-4 w-4 text-muted-foreground" />
+            <CardDescription>Requests waiting for final status</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{todaysPendingCount}</p>
-            <p className="text-xs text-muted-foreground">
-              Requests waiting for final status
-            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader>
             <CardTitle className="text-base font-medium">
               Today&apos;s Outflow
             </CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            <CardDescription>Money moved from wallet today</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">₹{spentToday.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">
-              Money moved from wallet today
-            </p>
           </CardContent>
         </Card>
       </div>

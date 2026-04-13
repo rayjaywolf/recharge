@@ -34,11 +34,11 @@ export async function POST(req: Request) {
 
     const targetUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!targetUser) {
-       return NextResponse.json({ error: "Retailer not found" }, { status: 404 });
+       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (actionType === "debit" && targetUser.balance < amount) {
-       return NextResponse.json({ error: "Debit sum forcefully exceeds retailer capabilities. Cannot dip into negative balances." }, { status: 400 });
+       return NextResponse.json({ error: "Debit sum forcefully exceeds user capabilities. Cannot dip into negative balances." }, { status: 400 });
     }
 
     // Wrap the top-up entirely in a secure Prisma transaction

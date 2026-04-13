@@ -74,7 +74,7 @@ export function DashboardHeader({
           <span className="text-xs text-muted-foreground">{userRole}</span>
         </div>
 
-        {isRetailer ? (
+        {userRole !== "ADMIN" ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
@@ -116,7 +116,7 @@ export function DashboardHeader({
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/retailer/notifications">
+                <Link href={userRole === "DISTRIBUTOR" ? "/distributor/notifications" : "/retailer/notifications"}>
                   View all notifications
                 </Link>
               </DropdownMenuItem>
@@ -130,7 +130,7 @@ export function DashboardHeader({
           </DropdownMenu>
         ) : null}
 
-        {isRetailer ? (
+        {userRole !== "ADMIN" ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" className="h-8 gap-2 px-3">
@@ -139,7 +139,7 @@ export function DashboardHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href="/retailer/funds">Add Funds</Link>
+                <Link href={userRole === "DISTRIBUTOR" ? "/distributor/funds" : "/retailer/funds"}>Add Funds</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

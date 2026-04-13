@@ -32,6 +32,7 @@ export default async function DashboardLayout({
   }
 
   const isAdmin = user.role === "ADMIN"
+  const isDistributor = user.role === "DISTRIBUTOR"
   const isRetailer = user.role === "RETAILER"
   const notifications: {
     id: string
@@ -40,12 +41,12 @@ export default async function DashboardLayout({
     createdAt: string
   }[] = []
 
-  if (isRetailer) {
+  if (isRetailer || isDistributor) {
     const [recentCredits, recentRechargeUpdates] = await Promise.all([
       prisma.transaction.findMany({
         where: {
           userId: user.id,
-          operator: "MANUAL_CREDIT",
+          operator: { in: ["MANUAL_CREDIT", "FUNDS_RECEIVED"] },
         },
         orderBy: { createdAt: "desc" },
         take: 25,
@@ -53,7 +54,7 @@ export default async function DashboardLayout({
       prisma.transaction.findMany({
         where: {
           userId: user.id,
-          operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT"] },
+          operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT", "FUNDS_RECEIVED", "FUNDS_SENT"] },
           status: { in: ["SUCCESS", "FAILED", "REFUNDED"] },
         },
         orderBy: { createdAt: "desc" },
@@ -94,7 +95,7 @@ export default async function DashboardLayout({
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar isAdmin={isAdmin} />
+        <AppSidebar userRole={user.role} />
         <SidebarInset>
           <DashboardHeader
             userName={user.name}

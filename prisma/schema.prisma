@@ -14,6 +14,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  DISTRIBUTOR
   RETAILER
 }
 
@@ -33,6 +34,9 @@ model User {
   role          Role          @default(RETAILER)
   balance       Int           @default(0)
   isSuspended   Boolean       @default(false)
+  distributorId String?
+  distributor   User?         @relation("DistributorToRetailer", fields: [distributorId], references: [id])
+  retailers     User[]        @relation("DistributorToRetailer")
   transactions  Transaction[]
   sessions      Session[]
   accounts      Account[]

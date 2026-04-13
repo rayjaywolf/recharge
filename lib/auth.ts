@@ -24,6 +24,10 @@ export const auth = betterAuth({
             isSuspended: {
                 type: "boolean",
                 defaultValue: false,
+            },
+            distributorId: {
+                type: "string",
+                required: false,
             }
         }
     },

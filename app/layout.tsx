@@ -1,8 +1,10 @@
 import { Geist, Geist_Mono, Merriweather, Instrument_Sans, Lora, JetBrains_Mono, Inter } from "next/font/google"
+import { Metadata } from "next"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
+import { Analytics } from '@vercel/analytics/next'
 
 const instrumentSansHeading = Instrument_Sans({subsets:['latin'],variable:'--font-heading'});
 
@@ -31,6 +33,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )

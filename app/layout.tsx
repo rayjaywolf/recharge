@@ -1,9 +1,11 @@
 import { Geist, Geist_Mono, Merriweather, Instrument_Sans, Lora, JetBrains_Mono, Inter } from "next/font/google"
+import type { Metadata } from "next"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/sonner"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const instrumentSansHeading = Instrument_Sans({subsets:['latin'],variable:'--font-heading'});
 
@@ -35,6 +37,7 @@ export default function RootLayout({
           {children}
           <Toaster />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   )

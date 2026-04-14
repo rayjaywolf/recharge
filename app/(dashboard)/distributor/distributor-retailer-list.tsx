@@ -20,6 +20,8 @@ type RetailerData = {
   email: string
   balance: number
   isSuspended: boolean
+  isApproved: boolean
+  isRejected: boolean
   createdAt: Date
   _count: { transactions: number }
 }
@@ -29,11 +31,10 @@ export function DistributorRetailerList({
 }: {
   initialData: RetailerData[]
 }) {
-  const [data, setData] = useState(initialData)
   const [query, setQuery] = useState("")
   const router = useRouter()
 
-  const filteredData = data.filter(
+  const filteredData = initialData.filter(
     (r) =>
       r.name.toLowerCase().includes(query.toLowerCase()) ||
       r.email.toLowerCase().includes(query.toLowerCase())
@@ -97,11 +98,23 @@ export function DistributorRetailerList({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-3">
-                      <div
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${retailer.isSuspended ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"}`}
-                      >
-                        {retailer.isSuspended ? "Suspended" : "Active"}
-                      </div>
+                      {retailer.isSuspended ? (
+                        <div className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-zinc-100 text-zinc-800">
+                           Suspended
+                        </div>
+                      ) : retailer.isRejected ? (
+                        <div className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-red-100 text-red-800">
+                           Rejected
+                        </div>
+                      ) : !retailer.isApproved ? (
+                        <div className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-800">
+                           Pending KYC
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800">
+                           Active
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">

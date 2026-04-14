@@ -9,6 +9,7 @@ import {
   History,
   Wallet,
   CreditCard,
+  ClipboardCheck,
 } from "lucide-react"
 
 import {
@@ -34,9 +35,10 @@ export function AppSidebar({ userRole }: { userRole: string }) {
   const navLinks = userRole === "ADMIN"
     ? [
         { name: "Overview", href: "/admin", icon: LayoutDashboard },
+        { name: "Approvals", href: "/admin/approvals", icon: ClipboardCheck },
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Funding", href: "/admin/funding", icon: Landmark },
-        { name: "Master Ledger", href: "/admin/transactions", icon: History },
+        { name: "Ledger", href: "/admin/transactions", icon: History },
       ]
     : userRole === "DISTRIBUTOR"
     ? [

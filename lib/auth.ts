@@ -25,6 +25,22 @@ export const auth = betterAuth({
                 type: "boolean",
                 defaultValue: false,
             },
+            isApproved: {
+                type: "boolean",
+                defaultValue: false,
+            },
+            isRejected: {
+                type: "boolean",
+                defaultValue: false,
+            },
+            whatsappNumber: { type: "string", required: false },
+            address: { type: "string", required: false },
+            pincode: { type: "string", required: false },
+            state: { type: "string", required: false },
+            aadharNumber: { type: "string", required: false },
+            panNumber: { type: "string", required: false },
+            gstNumber: { type: "string", required: false },
+            businessType: { type: "string", required: false },
             distributorId: {
                 type: "string",
                 required: false,

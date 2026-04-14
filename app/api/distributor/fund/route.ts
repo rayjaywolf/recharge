@@ -21,10 +21,17 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { userId, amount, remarks } = body;
+    const { userId, amount, remarks, idempotencyKey } = body;
 
     if (!userId || !amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid amount or parameters" }, { status: 400 });
+    }
+
+    if (idempotencyKey) {
+      const existing = await prisma.transaction.findUnique({ where: { idempotencyKey } });
+      if (existing) {
+         return NextResponse.json({ error: "Duplicate action detected. Request is already processing." }, { status: 409 });
+      }
     }
 
     const targetRetailer = await prisma.user.findUnique({ where: { id: userId } });
@@ -63,6 +70,7 @@ export async function POST(req: Request) {
           amount: amount,
           status: "SUCCESS",
           apiMessage: remarks ? `[FUNDS_SENT] ${remarks}` : `Transferred ${amount} to retailer ${updatedRetailer.name}`,
+          idempotencyKey: idempotencyKey || undefined
         }
       });
 

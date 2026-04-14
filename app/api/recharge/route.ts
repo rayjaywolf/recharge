@@ -13,10 +13,17 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { phone, operator, amount } = body;
+    const { phone, operator, amount, idempotencyKey } = body;
 
     if (!phone || !operator || !amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
+
+    if (idempotencyKey) {
+      const existing = await prisma.transaction.findUnique({ where: { idempotencyKey } });
+      if (existing) {
+         return NextResponse.json({ error: "Duplicate action detected. Request is already processing." }, { status: 409 });
+      }
     }
 
     // Wrap the initial transaction check in a Prisma $transaction
@@ -51,7 +58,8 @@ export async function POST(req: Request) {
           targetPhone: phone,
           operator: operator,
           amount: amount,
-          status: "PENDING"
+          status: "PENDING",
+          idempotencyKey: idempotencyKey || undefined
         }
       });
 

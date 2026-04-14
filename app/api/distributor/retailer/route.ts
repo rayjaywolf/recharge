@@ -21,10 +21,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, email, password } = body;
+    const { name, email, password, whatsappNumber, address, pincode, state, aadharNumber, panNumber, gstNumber, businessType } = body;
 
     if (!name || !email || !password) {
-      return NextResponse.json({ error: "All fields (name, email, password) are required." }, { status: 400 });
+      return NextResponse.json({ error: "All core fields (name, email, password) are required." }, { status: 400 });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -42,6 +42,15 @@ export async function POST(req: Request) {
         name,
         role: "RETAILER",
         distributorId: session.user.id,
+        whatsappNumber,
+        address,
+        pincode,
+        state,
+        aadharNumber,
+        panNumber,
+        gstNumber,
+        businessType,
+        isApproved: false // Explicitly requires Admin Validation
       } as any // Use 'as any' to allow passing custom fields injected to additionalFields
     });
 

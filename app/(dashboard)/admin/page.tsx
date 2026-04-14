@@ -45,9 +45,16 @@ export default async function AdminDashboard() {
   // 1. Total System Balance (Your Liability)
   const totalLiabilityResult = await prisma.user.aggregate({
     _sum: { balance: true },
-    where: { role: "RETAILER" },
+    where: { role: { in: ["RETAILER", "DISTRIBUTOR"] } },
   })
   const totalLiability = totalLiabilityResult._sum.balance || 0
+  
+  const distLiabilityResult = await prisma.user.aggregate({
+    _sum: { balance: true },
+    where: { role: "DISTRIBUTOR" },
+  })
+  const distLiability = distLiabilityResult._sum.balance || 0
+  const retLiability = totalLiability - distLiability
 
   // 2. Today's Transaction Volume (Only completed/successful outbound recharges, ignore wallet drops)
   const todaysVolumeResult = await prisma.transaction.aggregate({
@@ -118,7 +125,7 @@ export default async function AdminDashboard() {
               ₹{totalLiability.toLocaleString()}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Total retailer balance
+              Distributors: ₹{distLiability.toLocaleString()} · Retailers: ₹{retLiability.toLocaleString()}
             </p>
           </CardContent>
         </Card>
@@ -201,7 +208,7 @@ export default async function AdminDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Time</TableHead>
-                    <TableHead>Retailer</TableHead>
+                    <TableHead>User / Agent</TableHead>
                     <TableHead>Carrier</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Amount</TableHead>

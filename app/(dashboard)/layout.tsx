@@ -31,6 +31,14 @@ export default async function DashboardLayout({
     redirect("/login")
   }
 
+  if (user.isRejected) {
+    redirect("/rejected")
+  }
+
+  if (!user.isApproved && user.role !== "ADMIN") {
+    redirect("/pending-approval")
+  }
+
   const isAdmin = user.role === "ADMIN"
   const isDistributor = user.role === "DISTRIBUTOR"
   const isRetailer = user.role === "RETAILER"

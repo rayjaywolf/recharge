@@ -26,12 +26,16 @@ type UserData = {
   _count: { transactions: number }
 }
 
-export function RetailerTable({
+export function UserTable({
+  title,
   initialData,
   distributors,
+  hideDistributorCol = false,
 }: {
+  title: string
   initialData: UserData[]
   distributors: { id: string; name: string }[]
+  hideDistributorCol?: boolean
 }) {
   const [data, setData] = useState(initialData)
   const [query, setQuery] = useState("")
@@ -103,7 +107,8 @@ export function RetailerTable({
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
         <div className="relative w-full max-w-sm">
           <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -121,7 +126,7 @@ export function RetailerTable({
             <TableRow>
               <TableHead>User Info</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Mapped Distributor</TableHead>
+              {!hideDistributorCol && <TableHead>Distributor</TableHead>}
               <TableHead>Wallet Balance</TableHead>
               <TableHead>Tx Volume</TableHead>
               <TableHead>Access Status</TableHead>
@@ -157,9 +162,11 @@ export function RetailerTable({
                       {user.role}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {user.distributor ? user.distributor.name : "—"}
-                  </TableCell>
+                  {!hideDistributorCol && (
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.distributor ? user.distributor.name : "—"}
+                    </TableCell>
+                  )}
                   <TableCell className="text-lg font-bold">
                     ₹ {user.balance.toLocaleString()}
                   </TableCell>

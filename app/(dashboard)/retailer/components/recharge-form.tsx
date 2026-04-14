@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +25,19 @@ export function RechargeForm() {
     const [operator, setOperator] = useState("");
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
+    const [idempotencyKey, setIdempotencyKey] = useState("");
+    const isSubmitting = React.useRef(false);
     const router = useRouter();
+
+    React.useEffect(() => {
+       setIdempotencyKey(crypto.randomUUID());
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (isSubmitting.current) return; // Instantly lock to catch rapid clicks
+        isSubmitting.current = true;
         setLoading(true);
 
         try {
@@ -38,7 +47,8 @@ export function RechargeForm() {
                 body: JSON.stringify({
                     phone,
                     operator,
-                    amount: Number(amount)
+                    amount: Number(amount),
+                    idempotencyKey
                 })
             });
 
@@ -55,6 +65,8 @@ export function RechargeForm() {
             router.push(`/retailer/recharge/confirmation?${params.toString()}`);
             router.refresh();
         } catch {
+            // Regeneration to permit retry on strict failure
+            setIdempotencyKey(crypto.randomUUID());
             const params = new URLSearchParams({
                 status: "failed",
                 message: "An unexpected error occurred. Please try again.",
@@ -64,6 +76,7 @@ export function RechargeForm() {
             });
             router.push(`/retailer/recharge/confirmation?${params.toString()}`);
         } finally {
+            isSubmitting.current = false;
             setLoading(false);
         }
     }

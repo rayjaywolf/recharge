@@ -34,6 +34,16 @@ model User {
   role          Role          @default(RETAILER)
   balance       Int           @default(0)
   isSuspended   Boolean       @default(false)
+  isApproved    Boolean       @default(false)
+  isRejected    Boolean       @default(false)
+  whatsappNumber String?
+  address        String?
+  pincode        String?
+  state          String?
+  aadharNumber   String?
+  panNumber      String?
+  gstNumber      String?
+  businessType   String?
   distributorId String?
   distributor   User?         @relation("DistributorToRetailer", fields: [distributorId], references: [id])
   retailers     User[]        @relation("DistributorToRetailer")
@@ -57,6 +67,7 @@ model Transaction {
   status         TxStatus @default(PENDING)
   apiReferenceId String?  @unique
   apiMessage     String?
+  idempotencyKey String?  @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

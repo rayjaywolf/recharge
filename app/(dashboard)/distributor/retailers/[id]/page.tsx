@@ -35,6 +35,8 @@ export default async function DistributorRetailerDetails({
       email: true,
       balance: true,
       isSuspended: true,
+      isApproved: true,
+      isRejected: true,
       createdAt: true,
       distributorId: true,
       _count: {
@@ -60,8 +62,13 @@ export default async function DistributorRetailerDetails({
           <h1 className="text-3xl font-bold tracking-tight">{retailer.name}</h1>
           <p className="mt-1 text-muted-foreground">{retailer.email}</p>
         </div>
-        <div className={`px-3 py-1 rounded-full text-sm font-semibold border ${retailer.isSuspended ? "bg-red-100 text-red-800 border-red-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}`}>
-           {retailer.isSuspended ? "Suspended" : "Active"}
+        <div className={`px-3 py-1 rounded-full text-sm font-semibold border 
+           ${retailer.isSuspended ? "bg-zinc-100 text-zinc-800 border-zinc-200" 
+           : retailer.isRejected ? "bg-red-100 text-red-800 border-red-200" 
+           : !retailer.isApproved ? "bg-amber-100 text-amber-800 border-amber-200" 
+           : "bg-emerald-100 text-emerald-800 border-emerald-200"}`}
+        >
+           {retailer.isSuspended ? "Suspended" : retailer.isRejected ? "Rejected" : !retailer.isApproved ? "Pending KYC" : "Active"}
         </div>
       </div>
 
@@ -81,7 +88,10 @@ export default async function DistributorRetailerDetails({
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 mt-8">
-         <DistributorFundForm retailerId={retailer.id} disabled={retailer.isSuspended} />
+         <DistributorFundForm 
+            retailerId={retailer.id} 
+            disabled={retailer.isSuspended || retailer.isRejected || !retailer.isApproved} 
+         />
          
          <div className="rounded-xl border bg-card text-card-foreground shadow space-y-4 p-6">
             <h3 className="text-lg font-semibold border-b pb-2">Account Notes</h3>

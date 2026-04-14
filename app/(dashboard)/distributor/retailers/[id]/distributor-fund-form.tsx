@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +10,13 @@ export function DistributorFundForm({ retailerId, disabled }: { retailerId: stri
   const [loading, setLoading] = useState(false)
   const [amount, setAmount] = useState("")
   const [remarks, setRemarks] = useState("")
+  const [idempotencyKey, setIdempotencyKey] = useState("")
+  const isSubmitting = useRef(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setIdempotencyKey(crypto.randomUUID())
+  }, [])
 
   const handleFund = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,13 +24,15 @@ export function DistributorFundForm({ retailerId, disabled }: { retailerId: stri
     const numAmt = parseInt(amount);
     if (isNaN(numAmt) || numAmt <= 0) return alert("Invalid amount");
     
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setLoading(true)
 
     try {
       const res = await fetch("/api/distributor/fund", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: retailerId, amount: numAmt, remarks }),
+        body: JSON.stringify({ userId: retailerId, amount: numAmt, remarks, idempotencyKey }),
       })
       
       const resJson = await res.json();
@@ -34,10 +42,13 @@ export function DistributorFundForm({ retailerId, disabled }: { retailerId: stri
       alert("Transfer successful!");
       setAmount("");
       setRemarks("");
+      setIdempotencyKey(crypto.randomUUID());
       router.refresh();
     } catch (e: any) {
       alert(e.message);
+      setIdempotencyKey(crypto.randomUUID());
     } finally {
+      isSubmitting.current = false;
       setLoading(false)
     }
   }

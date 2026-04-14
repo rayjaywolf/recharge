@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Merriweather, Instrument_Sans, Lora, JetBrains_Mono,
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/sonner"
 
 const instrumentSansHeading = Instrument_Sans({subsets:['latin'],variable:'--font-heading'});
 
@@ -30,7 +31,10 @@ export default function RootLayout({
                         , lora.variable, instrumentSansHeading.variable, jetbrainsMono.variable, "font-sans", inter.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

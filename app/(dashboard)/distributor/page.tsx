@@ -22,10 +22,11 @@ export default async function DistributorPage() {
   // 1. Retailer Breakdown
   const retailers = await prisma.user.findMany({
     where: { distributorId: user.id },
-    select: { id: true, isSuspended: true }
+    select: { id: true, isSuspended: true, isApproved: true, isRejected: true }
   })
   const assignedRetailersCount = retailers.length;
-  const activeRetailersCount = retailers.filter(r => !r.isSuspended).length;
+  const activeRetailersCount = retailers.filter(r => r.isApproved && !r.isSuspended && !r.isRejected).length;
+  const pendingRetailersCount = retailers.filter(r => !r.isApproved && !r.isRejected).length;
   const retailerIds = retailers.map(r => r.id);
 
   // 2. Funds Sent to Network
@@ -77,7 +78,7 @@ export default async function DistributorPage() {
           <CardContent>
              <p className="text-2xl font-bold">{assignedRetailersCount}</p>
              <p className="text-xs text-muted-foreground mt-1">
-                {activeRetailersCount} Active · {assignedRetailersCount - activeRetailersCount} Suspended
+                {activeRetailersCount} Active · {pendingRetailersCount} Pending KYC
              </p>
           </CardContent>
         </Card>

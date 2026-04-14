@@ -29,6 +29,8 @@ export default async function DistributorRetailersPage() {
       email: true,
       balance: true,
       isSuspended: true,
+      isApproved: true,
+      isRejected: true,
       createdAt: true,
       _count: {
         select: { transactions: true },

@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { auth, prisma } from "@/lib/auth";
 import { headers } from "next/headers";
 
+function getOperatorCode(opName: string): string {
+  const normalized = opName.toLowerCase();
+  
+  if (normalized === "airtel") return "A";
+  if (normalized === "jio") return "JPP";
+  if (normalized === "vi") return "V";
+  if (normalized === "idea") return "I";
+  if (normalized === "bsnl topup") return "BT";
+  if (normalized === "bsnl recharge") return "BR";
+  
+  return opName;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth.api.getSession({
@@ -62,9 +75,54 @@ export async function POST(req: Request) {
       return { transaction, distributorId: user.distributorId };
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    
-    const isSuccess = Math.random() > 0.1; 
+    let isSuccess = false;
+    let isPending = false;
+    let apiMessage = "Unknown error";
+    let apiReferenceId = "";
+
+    try {
+      const apiUrl = new URL("https://business.a1topup.com/recharge/api");
+      apiUrl.searchParams.append("username", process.env.A1TOPUP_USERNAME || "");
+      apiUrl.searchParams.append("pwd", process.env.A1TOPUP_PASSWORD || "");
+      apiUrl.searchParams.append("number", phone);
+      apiUrl.searchParams.append("operatorcode", getOperatorCode(operator));
+      apiUrl.searchParams.append("amount", amount.toString());
+      apiUrl.searchParams.append("orderid", result.transaction.id);
+      apiUrl.searchParams.append("format", "json");
+
+      const response = await fetch(apiUrl.toString(), { method: "GET" });
+      const textResponse = await response.text();
+      let apiResponse;
+      try {
+        apiResponse = JSON.parse(textResponse);
+      } catch (e) {
+        apiResponse = { status: "error", message: textResponse };
+      }
+      
+      const statusStr = apiResponse.status ? apiResponse.status.toLowerCase() : "failed";
+      
+      if (statusStr === "success") {
+        isSuccess = true;
+        apiMessage = apiResponse.message || "Recharge successful";
+        const opidPart = apiResponse.opid ? ` [OPID: ${apiResponse.opid}]` : "";
+        apiReferenceId = (apiResponse.transaction_id || apiResponse.txid || `API-${Date.now()}`) + opidPart;
+      } else if (statusStr === "pending") {
+        isSuccess = false;
+        isPending = true;
+        apiMessage = apiResponse.message || "Recharge is pending with operator";
+        const opidPart = apiResponse.opid ? ` [OPID: ${apiResponse.opid}]` : "";
+        apiReferenceId = (apiResponse.transaction_id || apiResponse.txid || "") + opidPart;
+      } else {
+        isSuccess = false;
+        apiMessage = apiResponse.message || "Recharge failed at provider";
+        apiReferenceId = apiResponse.transaction_id || apiResponse.txid || "";
+      }
+    } catch (apiError) {
+       console.error("A1Topup API Error:", apiError);
+       isSuccess = false;
+       isPending = true; 
+       apiMessage = "Provider API timeout. Status unknown.";
+    }
 
     const rule = await prisma.commissionRule.findUnique({ where: { operator } });
     const rMargin = rule ? rule.retailerMargin : 0;
@@ -75,66 +133,83 @@ export async function POST(req: Request) {
     const dCommission = (amount * dMargin) / 100;
     const aCommission = (amount * aMargin) / 100;
 
-    const updatedTransaction = await prisma.transaction.update({
-      where: { id: result.transaction.id },
-      data: {
-        status: isSuccess ? "SUCCESS" : "FAILED",
-        apiMessage: isSuccess ? "Mock provider: Recharge successful" : "Mock provider: Gateway error",
-        apiReferenceId: `MOCK-${Date.now()}`,
-        ...(isSuccess ? {
-          retailerCommission: rCommission,
-          distributorCommission: dCommission,
-          adminCommission: aCommission
-        } : {})
-      }
-    });
+    if (isPending) {
+      const updatedTransaction = await prisma.transaction.update({
+        where: { id: result.transaction.id },
+        data: {
+          status: "PENDING",
+          apiMessage: apiMessage,
+          ...(apiReferenceId ? { apiReferenceId } : {})
+        }
+      });
+      return NextResponse.json({ 
+        success: true, 
+        message: "Recharge submitted and is currently pending",
+        transaction: updatedTransaction 
+      });
+    }
 
     if (!isSuccess) {
-      await prisma.$transaction([
-        prisma.user.update({
+      const updatedTransaction = await prisma.$transaction(async (tx) => {
+        const t = await tx.transaction.update({
+          where: { id: result.transaction.id },
+          data: {
+            status: "REFUNDED",
+            apiMessage: apiMessage,
+            ...(apiReferenceId ? { apiReferenceId } : {})
+          }
+        });
+        await tx.user.update({
            where: { id: session.user.id },
            data: { balance: { increment: amount } }
-        }),
-        prisma.transaction.update({
-           where: { id: result.transaction.id },
-           data: { status: "REFUNDED" }
-        })
-      ]);
+        });
+        return t;
+      });
       
       return NextResponse.json({ 
-        error: "Recharge failed at carrier gateway. Amount has been refunded.",
+        error: apiMessage,
         transaction: updatedTransaction 
       }, { status: 400 });
     }
 
-    // Process Commissions (Only reached if isSuccess is true)
-    const queries = [];
-    if (rCommission > 0) {
-      queries.push(prisma.user.update({
-        where: { id: session.user.id },
-        data: { earnings: { increment: rCommission } }
-      }));
-    }
-    if (dCommission > 0 && result.distributorId) {
-      queries.push(prisma.user.update({
-        where: { id: result.distributorId },
-        data: { earnings: { increment: dCommission } }
-      }));
-    }
-    if (aCommission > 0) {
-      // Find the first ADMIN to credit
-      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-      if (adminUser) {
-        queries.push(prisma.user.update({
+    const adminUser = aCommission > 0 ? await prisma.user.findFirst({ where: { role: "ADMIN" } }) : null;
+
+    const updatedTransaction = await prisma.$transaction(async (tx) => {
+      const t = await tx.transaction.update({
+        where: { id: result.transaction.id },
+        data: {
+          status: "SUCCESS",
+          apiMessage: apiMessage,
+          apiReferenceId: apiReferenceId,
+          retailerCommission: rCommission,
+          distributorCommission: dCommission,
+          adminCommission: aCommission
+        }
+      });
+
+      if (rCommission > 0) {
+        await tx.user.update({
+          where: { id: session.user.id },
+          data: { earnings: { increment: rCommission } }
+        });
+      }
+
+      if (dCommission > 0 && result.distributorId) {
+        await tx.user.update({
+          where: { id: result.distributorId },
+          data: { earnings: { increment: dCommission } }
+        });
+      }
+
+      if (aCommission > 0 && adminUser) {
+        await tx.user.update({
           where: { id: adminUser.id },
           data: { earnings: { increment: aCommission } }
-        }));
+        });
       }
-    }
-    
-    if (queries.length > 0) {
-      await prisma.$transaction(queries);
-    }
+
+      return t;
+    });
 
     return NextResponse.json({ 
       success: true, 

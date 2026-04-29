@@ -23,10 +23,10 @@ export default async function BankControlPage() {
     redirect("/retailer")
   }
 
-  // Preload retailers for the Bank Controls Select menu
-  const retailersList = await prisma.user.findMany({
-    where: { role: "RETAILER" },
-    select: { id: true, name: true, email: true, balance: true },
+  // Preload users for the Bank Controls Select menu
+  const usersList = await prisma.user.findMany({
+    where: { role: { in: ["RETAILER", "DISTRIBUTOR"] } },
+    select: { id: true, name: true, email: true, balance: true, role: true },
     orderBy: { name: "asc" },
   })
 
@@ -46,14 +46,14 @@ export default async function BankControlPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Funding</h1>
         <p className="mt-1 text-muted-foreground">
-          Manage retailer balances and funding operations.
+          Manage user balances and funding operations.
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_1.5fr]">
         {/* Left Side: Actions */}
         <div>
-          <BankControls retailers={retailersList} />
+          <BankControls users={usersList} />
         </div>
 
         {/* Right Side: Ledger */}
@@ -64,7 +64,7 @@ export default async function BankControlPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Time</TableHead>
-                  <TableHead>Retailer</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Notes</TableHead>
                 </TableRow>

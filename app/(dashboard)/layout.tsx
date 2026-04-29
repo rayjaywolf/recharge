@@ -2,10 +2,7 @@ import { auth, prisma } from "@/lib/auth"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
-import {
-  SidebarProvider,
-  SidebarInset,
-} from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -42,6 +39,46 @@ export default async function DashboardLayout({
   const isAdmin = user.role === "ADMIN"
   const isDistributor = user.role === "DISTRIBUTOR"
   const isRetailer = user.role === "RETAILER"
+
+  let apiBalance = 0
+  if (isAdmin) {
+    try {
+      const balanceUrl = new URL(
+        "https://business.a1topup.com/recharge/balance"
+      )
+      balanceUrl.searchParams.append(
+        "username",
+        process.env.A1TOPUP_USERNAME || ""
+      )
+      balanceUrl.searchParams.append("pwd", process.env.A1TOPUP_PASSWORD || "")
+      balanceUrl.searchParams.append("format", "json")
+
+      const res = await fetch(balanceUrl.toString(), { cache: "no-store" })
+      const textResponse = await res.text()
+
+      let data
+      try {
+        data = JSON.parse(textResponse)
+      } catch (parseError) {}
+
+      if (typeof data === "number") {
+        apiBalance = data
+      } else if (data && typeof data.balance !== "undefined") {
+        apiBalance = parseFloat(data.balance)
+      } else if (
+        data &&
+        typeof data.msg !== "undefined" &&
+        !isNaN(parseFloat(data.msg))
+      ) {
+        apiBalance = parseFloat(data.msg)
+      } else if (!isNaN(parseFloat(textResponse))) {
+        apiBalance = parseFloat(textResponse)
+      }
+    } catch (e) {
+      console.error("Failed to fetch API balance:", e)
+    }
+  }
+
   const notifications: {
     id: string
     title: string
@@ -62,7 +99,14 @@ export default async function DashboardLayout({
       prisma.transaction.findMany({
         where: {
           userId: user.id,
-          operator: { notIn: ["MANUAL_CREDIT", "MANUAL_DEBIT", "FUNDS_RECEIVED", "FUNDS_SENT"] },
+          operator: {
+            notIn: [
+              "MANUAL_CREDIT",
+              "MANUAL_DEBIT",
+              "FUNDS_RECEIVED",
+              "FUNDS_SENT",
+            ],
+          },
           status: { in: ["SUCCESS", "FAILED", "REFUNDED"] },
         },
         orderBy: { createdAt: "desc" },
@@ -96,7 +140,8 @@ export default async function DashboardLayout({
     }
 
     notifications.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
   }
 
@@ -109,6 +154,7 @@ export default async function DashboardLayout({
             userName={user.name}
             userRole={user.role}
             balance={user.balance}
+            apiBalance={apiBalance}
             isRetailer={isRetailer}
             userId={user.id}
             notifications={notifications}

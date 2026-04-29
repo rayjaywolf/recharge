@@ -30,6 +30,7 @@ type DashboardHeaderProps = {
   userName: string
   userRole: string
   balance: number
+  apiBalance?: number
   isRetailer: boolean
   notifications: RetailerNotification[]
 }
@@ -39,6 +40,7 @@ export function DashboardHeader({
   userName,
   userRole,
   balance,
+  apiBalance,
   isRetailer,
   notifications,
 }: DashboardHeaderProps) {
@@ -116,7 +118,13 @@ export function DashboardHeader({
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href={userRole === "DISTRIBUTOR" ? "/distributor/notifications" : "/retailer/notifications"}>
+                <Link
+                  href={
+                    userRole === "DISTRIBUTOR"
+                      ? "/distributor/notifications"
+                      : "/retailer/notifications"
+                  }
+                >
                   View all notifications
                 </Link>
               </DropdownMenuItem>
@@ -139,13 +147,24 @@ export function DashboardHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={userRole === "DISTRIBUTOR" ? "/distributor/funds" : "/retailer/funds"}>Add Funds</Link>
+                <Link
+                  href={
+                    userRole === "DISTRIBUTOR"
+                      ? "/distributor/funds"
+                      : "/retailer/funds"
+                  }
+                >
+                  Add Funds
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
           <div className="flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground">
-            <Wallet className="h-4 w-4" />₹ {balance.toFixed(2)}
+            <Wallet className="h-4 w-4" />₹{" "}
+            {apiBalance !== undefined
+              ? apiBalance.toFixed(2)
+              : balance.toFixed(2)}
           </div>
         )}
 

@@ -30,14 +30,15 @@ import {
   ArrowUpFromDot,
 } from "lucide-react"
 
-type RetailerInfo = {
+type UserInfo = {
   id: string
   name: string
   email: string
   balance: number
+  role: string
 }
 
-export function BankControls({ retailers }: { retailers: RetailerInfo[] }) {
+export function BankControls({ users }: { users: UserInfo[] }) {
   const [activeTab, setActiveTab] = useState<"credit" | "debit">("credit")
   const [userId, setUserId] = useState("")
   const [amount, setAmount] = useState("")
@@ -49,7 +50,7 @@ export function BankControls({ retailers }: { retailers: RetailerInfo[] }) {
   } | null>(null)
   const router = useRouter()
 
-  const selectedRetailer = retailers.find((r) => r.id === userId)
+  const selectedUser = users.find((r) => r.id === userId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -124,8 +125,8 @@ export function BankControls({ retailers }: { retailers: RetailerInfo[] }) {
         </CardTitle>
         <CardDescription>
           {activeTab === "credit"
-            ? "Add money to a retailer's wallet."
-            : "Remove money from a retailer's wallet."}
+            ? "Add money to a user's wallet."
+            : "Remove money from a user's wallet."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -147,7 +148,7 @@ export function BankControls({ retailers }: { retailers: RetailerInfo[] }) {
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="retailer">Select Retailer</Label>
+            <Label htmlFor="user">Select User</Label>
             <Select
               value={userId}
               onValueChange={(val) => {
@@ -156,29 +157,29 @@ export function BankControls({ retailers }: { retailers: RetailerInfo[] }) {
               }}
               required
             >
-              <SelectTrigger id="retailer">
-                <SelectValue placeholder="Choose a retailer..." />
+              <SelectTrigger id="user">
+                <SelectValue placeholder="Choose a user..." />
               </SelectTrigger>
               <SelectContent>
-                {retailers.length === 0 ? (
+                {users.length === 0 ? (
                   <SelectItem value="empty" disabled>
-                    No retailers available
+                    No users available
                   </SelectItem>
                 ) : (
-                  retailers.map((r) => (
+                  users.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name} · {r.email}
+                      {r.name} ({r.role}) · {r.email}
                     </SelectItem>
                   ))
                 )}
               </SelectContent>
             </Select>
 
-            {selectedRetailer && (
+            {selectedUser && (
               <div className="mt-1 rounded-md bg-muted p-2 text-xs text-muted-foreground">
                 Current Balance:{" "}
                 <span className="font-bold text-foreground">
-                  ₹ {selectedRetailer.balance.toLocaleString()}
+                  ₹ {selectedUser.balance.toLocaleString()}
                 </span>
               </div>
             )}

@@ -9,7 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card"
 
 export default async function RetailerCommissionsPage() {
   const session = await auth.api.getSession({
@@ -19,14 +25,11 @@ export default async function RetailerCommissionsPage() {
   if (!session) redirect("/login")
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } })
-  // Assuming a retailer doesn't have a specific role string restriction to view their own dashboard,
-  // but if they do, we'd check it. Typically any user can be a retailer.
   if (user?.role === "ADMIN" || user?.role === "DISTRIBUTOR") {
-    // Optional: redirect to their own dashboard, though typically standard users fall back here.
   }
 
   const rules = await prisma.commissionRule.findMany({
-    orderBy: { operator: "asc" }
+    orderBy: { operator: "asc" },
   })
 
   return (
@@ -56,14 +59,19 @@ export default async function RetailerCommissionsPage() {
             <TableBody>
               {rules.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center text-muted-foreground h-24">
+                  <TableCell
+                    colSpan={2}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     No commission rules currently configured by the admin.
                   </TableCell>
                 </TableRow>
               ) : (
                 rules.map((rule) => (
                   <TableRow key={rule.id}>
-                    <TableCell className="font-medium">{rule.operator}</TableCell>
+                    <TableCell className="font-medium">
+                      {rule.operator}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {rule.retailerMargin.toFixed(2)}%
                     </TableCell>

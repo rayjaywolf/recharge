@@ -1,7 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RechargeForm } from "../components/recharge-form";
+import { prisma } from "@/lib/auth";
 
-export default function RetailerRechargePage() {
+export default async function RetailerRechargePage() {
+  const rules = await prisma.commissionRule.findMany({
+    select: { operator: true },
+    orderBy: { operator: "asc" }
+  });
+  const availableOperators = rules.map(r => r.operator);
+
   return (
     <div className="space-y-6">
       <div>
@@ -19,7 +26,7 @@ export default function RetailerRechargePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RechargeForm />
+          <RechargeForm availableOperators={availableOperators} />
         </CardContent>
       </Card>
     </div>

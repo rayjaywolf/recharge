@@ -26,9 +26,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Wrap the initial transaction check in a Prisma $transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Lock/Fetch user securely to avoid race conditions
       const user = await tx.user.findUnique({
         where: { id: session.user.id }
       });
@@ -45,13 +43,11 @@ export async function POST(req: Request) {
         throw new Error("Insufficient balance");
       }
 
-      // 2. Deduct balance sequentially
       await tx.user.update({
-        where: { id: user.id },
+        where: { id: user.id, balance: { gte: amount } },
         data: { balance: { decrement: amount } }
       });
 
-      // 3. Document PENDING transaction
       const transaction = await tx.transaction.create({
         data: {
           userId: user.id,
@@ -63,27 +59,36 @@ export async function POST(req: Request) {
         }
       });
 
-      return transaction;
+      return { transaction, distributorId: user.distributorId };
     });
 
-    // 4. Mock API Call to 3rd party provider
-    // Using a timeout to simulate a real payment delay
     await new Promise((resolve) => setTimeout(resolve, 800));
     
-    // Test data constraint logic: 10% failure chance naturally
     const isSuccess = Math.random() > 0.1; 
 
-    // Update the record with actual gateway result
+    const rule = await prisma.commissionRule.findUnique({ where: { operator } });
+    const rMargin = rule ? rule.retailerMargin : 0;
+    const dMargin = rule ? rule.distributorMargin : 0;
+    const aMargin = rule ? rule.adminMargin : 0;
+
+    const rCommission = (amount * rMargin) / 100;
+    const dCommission = (amount * dMargin) / 100;
+    const aCommission = (amount * aMargin) / 100;
+
     const updatedTransaction = await prisma.transaction.update({
-      where: { id: result.id },
+      where: { id: result.transaction.id },
       data: {
         status: isSuccess ? "SUCCESS" : "FAILED",
         apiMessage: isSuccess ? "Mock provider: Recharge successful" : "Mock provider: Gateway error",
-        apiReferenceId: `MOCK-${Date.now()}`
+        apiReferenceId: `MOCK-${Date.now()}`,
+        ...(isSuccess ? {
+          retailerCommission: rCommission,
+          distributorCommission: dCommission,
+          adminCommission: aCommission
+        } : {})
       }
     });
 
-    // Handle refunds seamlessly if gateway fails
     if (!isSuccess) {
       await prisma.$transaction([
         prisma.user.update({
@@ -91,7 +96,7 @@ export async function POST(req: Request) {
            data: { balance: { increment: amount } }
         }),
         prisma.transaction.update({
-           where: { id: result.id },
+           where: { id: result.transaction.id },
            data: { status: "REFUNDED" }
         })
       ]);
@@ -100,6 +105,35 @@ export async function POST(req: Request) {
         error: "Recharge failed at carrier gateway. Amount has been refunded.",
         transaction: updatedTransaction 
       }, { status: 400 });
+    }
+
+    // Process Commissions (Only reached if isSuccess is true)
+    const queries = [];
+    if (rCommission > 0) {
+      queries.push(prisma.user.update({
+        where: { id: session.user.id },
+        data: { earnings: { increment: rCommission } }
+      }));
+    }
+    if (dCommission > 0 && result.distributorId) {
+      queries.push(prisma.user.update({
+        where: { id: result.distributorId },
+        data: { earnings: { increment: dCommission } }
+      }));
+    }
+    if (aCommission > 0) {
+      // Find the first ADMIN to credit
+      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+      if (adminUser) {
+        queries.push(prisma.user.update({
+          where: { id: adminUser.id },
+          data: { earnings: { increment: aCommission } }
+        }));
+      }
+    }
+    
+    if (queries.length > 0) {
+      await prisma.$transaction(queries);
     }
 
     return NextResponse.json({ 

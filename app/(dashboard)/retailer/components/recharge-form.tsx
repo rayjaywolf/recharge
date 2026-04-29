@@ -13,14 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Loader2 } from "lucide-react";
 
-const operators = [
-  { value: "JIO", label: "Jio" },
-  { value: "AIRTEL", label: "Airtel" },
-  { value: "VI", label: "Vi (Vodafone Idea)" },
-  { value: "BSNL", label: "BSNL" },
-];
-
-export function RechargeForm() {
+export function RechargeForm({ availableOperators }: { availableOperators: string[] }) {
     const [phone, setPhone] = useState("");
     const [operator, setOperator] = useState("");
     const [amount, setAmount] = useState("");
@@ -36,6 +29,12 @@ export function RechargeForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
+        const numericAmount = Number(amount);
+        if (!Number.isInteger(numericAmount) || numericAmount <= 0) {
+             alert("Gateway explicitly requires mathematically whole integer amounts.");
+             return;
+        }
+
         if (isSubmitting.current) return; // Instantly lock to catch rapid clicks
         isSubmitting.current = true;
         setLoading(true);
@@ -53,6 +52,10 @@ export function RechargeForm() {
             });
 
             const data = await res.json();
+            
+            // Regenerate to secure back-navigation idempotency
+            setIdempotencyKey(crypto.randomUUID());
+
             const params = new URLSearchParams({
                 status: res.ok ? "success" : "failed",
                 message: res.ok ? (data.message || "Recharge completed successfully") : (data.error || "Failed to process recharge"),
@@ -107,18 +110,18 @@ export function RechargeForm() {
                     className="w-full justify-between font-normal"
                   >
                     {operator
-                      ? operators.find((item) => item.value === operator)?.label
+                      ? operator
                       : "Select an operator"}
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  {operators.map((item) => (
+                  {availableOperators.map((item) => (
                     <DropdownMenuItem
-                      key={item.value}
-                      onSelect={() => setOperator(item.value)}
+                      key={item}
+                      onSelect={() => setOperator(item)}
                     >
-                      {item.label}
+                      {item}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>

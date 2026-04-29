@@ -33,6 +33,7 @@ model User {
   image         String?
   role          Role          @default(RETAILER)
   balance       Int           @default(0)
+  earnings      Float         @default(0.0)
   isSuspended   Boolean       @default(false)
   isApproved    Boolean       @default(false)
   isRejected    Boolean       @default(false)
@@ -68,6 +69,9 @@ model Transaction {
   apiReferenceId String?  @unique
   apiMessage     String?
   idempotencyKey String?  @unique
+  retailerCommission    Float @default(0)
+  distributorCommission Float @default(0)
+  adminCommission       Float @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -122,4 +126,17 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model CommissionRule {
+  id                String   @id @default(cuid())
+  operator          String   @unique
+  providerMargin    Float    @default(0.0)
+  adminMargin       Float    @default(0.0)
+  distributorMargin Float    @default(0.0)
+  retailerMargin    Float    @default(0.0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("commission_rule")
 }

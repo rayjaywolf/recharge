@@ -49,9 +49,9 @@ export async function POST(req: Request) {
 
     // Wrap the top-up entirely in a secure Prisma transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Deduct from distributor
+      // Deduct from distributor with race-condition guard
       const updatedDistributor = await tx.user.update({
-        where: { id: session.user.id },
+        where: { id: session.user.id, balance: { gte: amount } },
         data: { balance: { decrement: amount } }
       });
 

@@ -39,6 +39,8 @@ export function AppSidebar({ userRole }: { userRole: string }) {
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Funding", href: "/admin/funding", icon: Landmark },
         { name: "Ledger", href: "/admin/transactions", icon: History },
+        { name: "Commissions", href: "/admin/commissions", icon: FileText },
+        { name: "Earnings", href: "/admin/earnings", icon: Landmark },
       ]
     : userRole === "DISTRIBUTOR"
     ? [
@@ -47,6 +49,8 @@ export function AppSidebar({ userRole }: { userRole: string }) {
         { name: "Retailers", href: "/distributor/retailers", icon: Users },
         { name: "Ledger", href: "/distributor/ledger", icon: FileText },
         { name: "Funds", href: "/distributor/funds", icon: Wallet },
+        { name: "Commissions", href: "/distributor/commissions", icon: FileText },
+        { name: "Earnings", href: "/distributor/earnings", icon: Landmark },
       ]
     : [
         { name: "Overview", href: "/retailer", icon: LayoutDashboard },
@@ -56,6 +60,16 @@ export function AppSidebar({ userRole }: { userRole: string }) {
           name: "Funds",
           href: "/retailer/funds",
           icon: Wallet,
+        },
+        {
+          name: "Commissions",
+          href: "/retailer/commissions",
+          icon: FileText,
+        },
+        {
+          name: "Earnings",
+          href: "/retailer/earnings",
+          icon: Landmark,
         },
       ]
 

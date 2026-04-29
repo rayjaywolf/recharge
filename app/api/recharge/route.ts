@@ -18,6 +18,40 @@ function getOperatorCode(opName: string): string {
   return opName;
 }
 
+function getCircleCode(circleInput: string): string {
+  const circleMap: { [key: string]: string } = {
+    'AP': '13', 'ANDHRA PRADESH': '13',
+    'AS': '24', 'ASSAM': '24',
+    'BR': '17', 'BIHAR': '17',
+    'CG': '27', 'CHHATTISGARH': '27',
+    'GJ': '12', 'GUJARAT': '12',
+    'HR': '20', 'HARYANA': '20',
+    'HP': '21', 'HIMACHAL PRADESH': '21',
+    'JK': '25', 'JAMMU AND KASHMIR': '25',
+    'JH': '22', 'JHARKHAND': '22',
+    'KA': '9', 'KARNATAKA': '9',
+    'KL': '14', 'KERALA': '14',
+    'MP': '16', 'MADHYA PRADESH': '16',
+    'MH': '4', 'MAHARASHTRA': '4',
+    'OR': '23', 'ODISHA': '23', 'ORISSA': '23',
+    'PB': '1', 'PUNJAB': '1',
+    'RJ': '18', 'RAJASTHAN': '18',
+    'TN': '8', 'TAMIL NADU': '8',
+    'UP': '11', 'UTTAR PRADESH WEST': '11',
+    'UPW': '11',
+    'UPE': '10', 'UTTAR PRADESH EAST': '10',
+    'WB': '2', 'WEST BENGAL': '2',
+    'MU': '3', 'MUMBAI': '3',
+    'DL': '5', 'DELHI': '5',
+    'CN': '7', 'CHENNAI': '7',
+    'KO': '6', 'KOLKATA': '6',
+    'NE': '26', 'NORTH EAST': '26'
+  };
+  
+  const normalized = circleInput.toUpperCase().trim();
+  return circleMap[normalized] || circleInput;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth.api.getSession({
@@ -29,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { phone, operator, amount, idempotencyKey } = body;
+    const { phone, operator, amount, circleCode, idempotencyKey } = body;
 
     if (!phone || !operator || !amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -70,6 +104,7 @@ export async function POST(req: Request) {
           targetPhone: phone,
           operator: operator,
           amount: amount,
+          circleCode: circleCode || null,
           status: "PENDING",
           idempotencyKey: idempotencyKey || undefined
         }
@@ -89,9 +124,17 @@ export async function POST(req: Request) {
       apiUrl.searchParams.append("pwd", process.env.A1TOPUP_PASSWORD || "");
       apiUrl.searchParams.append("number", phone);
       apiUrl.searchParams.append("operatorcode", getOperatorCode(operator));
+      if (circleCode) {
+        const numericCircleCode = getCircleCode(circleCode);
+        apiUrl.searchParams.append("circlecode", numericCircleCode);
+      }
       apiUrl.searchParams.append("amount", amount.toString());
       apiUrl.searchParams.append("orderid", result.transaction.id);
       apiUrl.searchParams.append("format", "json");
+
+      console.log("A1Topup API URL:", apiUrl.toString());
+      console.log("Operator:", operator, "Code:", getOperatorCode(operator));
+      console.log("Circle Input:", circleCode, "Numeric Code:", circleCode ? getCircleCode(circleCode) : 'N/A');
 
       const response = await fetch(apiUrl.toString(), { method: "GET" });
       const textResponse = await response.text();

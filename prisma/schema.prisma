@@ -65,6 +65,7 @@ model Transaction {
   targetPhone    String
   operator       String
   amount         Int
+  circleCode     String?
   status         TxStatus @default(PENDING)
   apiReferenceId String?  @unique
   apiMessage     String?

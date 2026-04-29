@@ -1,150 +1,167 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Loader2 } from "lucide-react";
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown, Loader2 } from "lucide-react"
 
-export function RechargeForm({ availableOperators }: { availableOperators: string[] }) {
-    const [phone, setPhone] = useState("");
-    const [operator, setOperator] = useState("");
-    const [amount, setAmount] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [idempotencyKey, setIdempotencyKey] = useState("");
-    const isSubmitting = React.useRef(false);
-    const router = useRouter();
+export function RechargeForm({
+  availableOperators,
+}: {
+  availableOperators: string[]
+}) {
+  const [phone, setPhone] = useState("")
+  const [operator, setOperator] = useState("")
+  const [amount, setAmount] = useState("")
+  const [circleCode, setCircleCode] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [idempotencyKey, setIdempotencyKey] = useState("")
+  const isSubmitting = React.useRef(false)
+  const router = useRouter()
 
-    React.useEffect(() => {
-       setIdempotencyKey(crypto.randomUUID());
-    }, []);
+  React.useEffect(() => {
+    setIdempotencyKey(crypto.randomUUID())
+  }, [])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        const numericAmount = Number(amount);
-        if (!Number.isInteger(numericAmount) || numericAmount <= 0) {
-             alert("Gateway explicitly requires mathematically whole integer amounts.");
-             return;
-        }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-        if (isSubmitting.current) return; // Instantly lock to catch rapid clicks
-        isSubmitting.current = true;
-        setLoading(true);
-
-        try {
-            const res = await fetch("/api/recharge", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    phone,
-                    operator,
-                    amount: Number(amount),
-                    idempotencyKey
-                })
-            });
-
-            const data = await res.json();
-            
-            // Regenerate to secure back-navigation idempotency
-            setIdempotencyKey(crypto.randomUUID());
-
-            const params = new URLSearchParams({
-                status: res.ok ? "success" : "failed",
-                message: res.ok ? (data.message || "Recharge completed successfully") : (data.error || "Failed to process recharge"),
-                phone,
-                operator,
-                amount,
-                referenceId: data?.transaction?.apiReferenceId || ""
-            });
-
-            router.push(`/retailer/recharge/confirmation?${params.toString()}`);
-            router.refresh();
-        } catch {
-            // Regeneration to permit retry on strict failure
-            setIdempotencyKey(crypto.randomUUID());
-            const params = new URLSearchParams({
-                status: "failed",
-                message: "An unexpected error occurred. Please try again.",
-                phone,
-                operator,
-                amount
-            });
-            router.push(`/retailer/recharge/confirmation?${params.toString()}`);
-        } finally {
-            isSubmitting.current = false;
-            setLoading(false);
-        }
+    const numericAmount = Number(amount)
+    if (!Number.isInteger(numericAmount) || numericAmount <= 0) {
+      alert("Gateway explicitly requires mathematically whole integer amounts.")
+      return
     }
 
-    return (
-        <form onSubmit={handleSubmit} className="grid gap-4 w-full">
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="9876543210"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
+    if (isSubmitting.current) return // Instantly lock to catch rapid clicks
+    isSubmitting.current = true
+    setLoading(true)
 
-            <div className="grid gap-2">
-              <Label htmlFor="operator">Operator</Label>
-              <input type="hidden" name="operator" value={operator} required />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    id="operator"
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-between font-normal"
-                  >
-                    {operator
-                      ? operator
-                      : "Select an operator"}
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {availableOperators.map((item) => (
-                    <DropdownMenuItem
-                      key={item}
-                      onSelect={() => setOperator(item)}
-                    >
-                      {item}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+    try {
+      const res = await fetch("/api/recharge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          operator,
+          amount: Number(amount),
+          circleCode: circleCode || undefined,
+          idempotencyKey,
+        }),
+      })
 
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount (₹)</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="1"
-                placeholder="100"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </div>
+      const data = await res.json()
 
-            <Button className="w-full mt-2" type="submit" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Initiate Recharge
+      // Regenerate to secure back-navigation idempotency
+      setIdempotencyKey(crypto.randomUUID())
+
+      const params = new URLSearchParams({
+        status: res.ok ? "success" : "failed",
+        message: res.ok
+          ? data.message || "Recharge completed successfully"
+          : data.error || "Failed to process recharge",
+        phone,
+        operator,
+        amount,
+        referenceId: data?.transaction?.apiReferenceId || "",
+      })
+
+      router.push(`/retailer/recharge/confirmation?${params.toString()}`)
+      router.refresh()
+    } catch {
+      // Regeneration to permit retry on strict failure
+      setIdempotencyKey(crypto.randomUUID())
+      const params = new URLSearchParams({
+        status: "failed",
+        message: "An unexpected error occurred. Please try again.",
+        phone,
+        operator,
+        amount,
+      })
+      router.push(`/retailer/recharge/confirmation?${params.toString()}`)
+    } finally {
+      isSubmitting.current = false
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid w-full gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="phone">Phone Number</Label>
+        <Input
+          id="phone"
+          type="tel"
+          placeholder="9876543210"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="operator">Operator</Label>
+        <input type="hidden" name="operator" value={operator} required />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="operator"
+              type="button"
+              variant="outline"
+              className="w-full justify-between font-normal"
+            >
+              {operator ? operator : "Select an operator"}
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
-        </form>
-    );
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {availableOperators.map((item) => (
+              <DropdownMenuItem key={item} onSelect={() => setOperator(item)}>
+                {item}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="amount">Amount (₹)</Label>
+        <Input
+          id="amount"
+          type="number"
+          min="1"
+          placeholder="100"
+          required
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="circleCode">Circle Code (Optional)</Label>
+        <Input
+          id="circleCode"
+          type="text"
+          placeholder="e.g., DL, MH, GJ"
+          value={circleCode}
+          onChange={(e) => setCircleCode(e.target.value.toUpperCase())}
+        />
+        <p className="text-xs text-muted-foreground">
+          Enter circle code if required (e.g., DL for Delhi, MH for Maharashtra)
+        </p>
+      </div>
+
+      <Button className="mt-2 w-full" type="submit" disabled={loading}>
+        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        Initiate Recharge
+      </Button>
+    </form>
+  )
 }

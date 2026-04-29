@@ -6,10 +6,13 @@ function getOperatorCode(opName: string): string {
   const normalized = opName.toLowerCase();
   
   if (normalized === "airtel") return "A";
-  if (normalized === "jio") return "JPP";
+  if (normalized === "vodafone") return "V";
   if (normalized === "vi") return "V";
-  if (normalized === "idea") return "I";
   if (normalized === "bsnl topup") return "BT";
+  if (normalized === "reliance - jio") return "RC";
+  if (normalized === "jio") return "RC";
+  if (normalized === "idea") return "I";
+  if (normalized === "bsnl - stv") return "BR";
   if (normalized === "bsnl recharge") return "BR";
   
   return opName;

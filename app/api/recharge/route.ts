@@ -179,6 +179,11 @@ export async function POST(req: Request) {
     const dCommission = (amount * dMargin) / 100;
     const aCommission = (amount * aMargin) / 100;
 
+    // If retailer has no distributor, distributor commission goes to admin
+    const hasDistributor = !!result.distributorId;
+    const adminCommission = aCommission + (hasDistributor ? 0 : dCommission);
+    const distributorCommission = hasDistributor ? dCommission : 0;
+
     if (isPending) {
       const updatedTransaction = await prisma.transaction.update({
         where: { id: result.transaction.id },
@@ -218,7 +223,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const adminUser = aCommission > 0 ? await prisma.user.findFirst({ where: { role: "ADMIN" } }) : null;
+    const adminUser = adminCommission > 0 ? await prisma.user.findFirst({ where: { role: "ADMIN" } }) : null;
 
     const updatedTransaction = await prisma.$transaction(async (tx) => {
       const t = await tx.transaction.update({
@@ -228,8 +233,8 @@ export async function POST(req: Request) {
           apiMessage: apiMessage,
           apiReferenceId: apiReferenceId,
           retailerCommission: rCommission,
-          distributorCommission: dCommission,
-          adminCommission: aCommission
+          distributorCommission: distributorCommission,
+          adminCommission: adminCommission
         }
       });
 
@@ -240,17 +245,17 @@ export async function POST(req: Request) {
         });
       }
 
-      if (dCommission > 0 && result.distributorId) {
+      if (distributorCommission > 0 && result.distributorId) {
         await tx.user.update({
           where: { id: result.distributorId },
-          data: { earnings: { increment: dCommission } }
+          data: { earnings: { increment: distributorCommission } }
         });
       }
 
-      if (aCommission > 0 && adminUser) {
+      if (adminCommission > 0 && adminUser) {
         await tx.user.update({
           where: { id: adminUser.id },
-          data: { earnings: { increment: aCommission } }
+          data: { earnings: { increment: adminCommission } }
         });
       }
 

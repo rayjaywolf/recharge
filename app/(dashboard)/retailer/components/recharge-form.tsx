@@ -27,8 +27,24 @@ export function RechargeForm({
   const isSubmitting = React.useRef(false)
   const router = useRouter()
 
+  // Polyfill for crypto.randomUUID() in mobile/Capacitor environments
+  const generateUUID = () => {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+    // Fallback for environments without crypto.randomUUID
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0
+        const v = c == "x" ? r : (r & 0x3) | 0x8
+        return v.toString(16)
+      }
+    )
+  }
+
   React.useEffect(() => {
-    setIdempotencyKey(crypto.randomUUID())
+    setIdempotencyKey(generateUUID())
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,7 +76,7 @@ export function RechargeForm({
       const data = await res.json()
 
       // Regenerate to secure back-navigation idempotency
-      setIdempotencyKey(crypto.randomUUID())
+      setIdempotencyKey(generateUUID())
 
       const params = new URLSearchParams({
         status: res.ok ? "success" : "failed",
@@ -77,7 +93,7 @@ export function RechargeForm({
       router.refresh()
     } catch {
       // Regeneration to permit retry on strict failure
-      setIdempotencyKey(crypto.randomUUID())
+      setIdempotencyKey(generateUUID())
       const params = new URLSearchParams({
         status: "failed",
         message: "An unexpected error occurred. Please try again.",

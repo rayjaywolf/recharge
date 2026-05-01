@@ -138,10 +138,15 @@ export async function POST(req: Request) {
 
       const response = await fetch(apiUrl.toString(), { method: "GET" });
       const textResponse = await response.text();
+      console.log("A1Topup API Response Status:", response.status);
+      console.log("A1Topup API Raw Response:", textResponse);
+      
       let apiResponse;
       try {
         apiResponse = JSON.parse(textResponse);
+        console.log("A1Topup API Parsed Response:", apiResponse);
       } catch (e) {
+        console.log("Failed to parse JSON response:", e);
         apiResponse = { status: "error", message: textResponse };
       }
       

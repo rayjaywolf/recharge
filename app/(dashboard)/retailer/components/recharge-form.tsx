@@ -22,6 +22,7 @@ export function RechargeForm({
   const [operator, setOperator] = useState("")
   const [amount, setAmount] = useState("")
   const [circleCode, setCircleCode] = useState("")
+  const [provider, setProvider] = useState("REALROBO")
   const [loading, setLoading] = useState(false)
   const [idempotencyKey, setIdempotencyKey] = useState("")
   const isSubmitting = React.useRef(false)
@@ -70,6 +71,7 @@ export function RechargeForm({
           amount: Number(amount),
           circleCode: circleCode || undefined,
           idempotencyKey,
+          provider,
         }),
       })
 
@@ -87,6 +89,7 @@ export function RechargeForm({
         operator,
         amount,
         referenceId: data?.transaction?.apiReferenceId || "",
+        apiMessage: data?.transaction?.apiMessage || "",
       })
 
       router.push(`/retailer/recharge/confirmation?${params.toString()}`)
@@ -100,6 +103,7 @@ export function RechargeForm({
         phone,
         operator,
         amount,
+        apiMessage: "",
       })
       router.push(`/retailer/recharge/confirmation?${params.toString()}`)
     } finally {
@@ -120,6 +124,39 @@ export function RechargeForm({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="provider">Provider</Label>
+        <input type="hidden" name="provider" value={provider} required />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="provider"
+              type="button"
+              variant="outline"
+              className="w-full justify-between font-normal"
+            >
+              {provider === "REALROBO"
+                ? "RealRobo"
+                : provider === "MROBOTICS"
+                  ? "MRobotics"
+                  : "A1TopUp"}
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => setProvider("REALROBO")}>
+              RealRobo (Default)
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setProvider("MROBOTICS")}>
+              MRobotics
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setProvider("A1TOPUP")}>
+              A1TopUp
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid gap-2">

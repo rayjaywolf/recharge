@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth, prisma } from "@/lib/auth";
 import { headers } from "next/headers";
+import { performRealRoboRecharge, checkRealRoboStatus } from "@/lib/realrobo";
+import { performMRoboticsRecharge, checkMRoboticsStatus } from "@/lib/mrobotics";
+import { validateProviderCredentials } from "@/lib/env-validation";
 
 function getOperatorCode(opName: string): string {
   const normalized = opName.toLowerCase();
@@ -52,6 +55,37 @@ function getCircleCode(circleInput: string): string {
   return circleMap[normalized] || circleInput;
 }
 
+function validatePhoneNumber(phone: string): boolean {
+  // Remove all non-digit characters
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  // Check if it's a valid Indian mobile number
+  // Indian mobile numbers are 10 digits (without country code)
+  // or 12 digits with country code (91)
+  if (cleanPhone.length === 10) {
+    // Check if it starts with valid mobile prefix (6,7,8,9)
+    return /^[6-9]\d{9}$/.test(cleanPhone);
+  } else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+    // Check if the last 10 digits start with valid mobile prefix
+    return /^[6-9]\d{9}$/.test(cleanPhone.substring(2));
+  }
+  
+  return false;
+}
+
+function normalizePhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  // If it's 12 digits starting with 91, remove the country code
+  if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+    return cleanPhone.substring(2);
+  }
+  
+  // Return the 10-digit number
+  return cleanPhone;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth.api.getSession({
@@ -63,11 +97,21 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { phone, operator, amount, circleCode, idempotencyKey } = body;
+    const { phone, operator, amount, circleCode, idempotencyKey, provider = "REALROBO" } = body;
 
     if (!phone || !operator || !amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
+    
+    // Validate phone number
+    if (!validatePhoneNumber(phone)) {
+      return NextResponse.json({ 
+        error: "Invalid phone number. Please enter a valid 10-digit Indian mobile number." 
+      }, { status: 400 });
+    }
+    
+    // Normalize phone number to 10 digits
+    const normalizedPhone = normalizePhoneNumber(phone);
 
     if (idempotencyKey) {
       const existing = await prisma.transaction.findUnique({ where: { idempotencyKey } });
@@ -101,10 +145,11 @@ export async function POST(req: Request) {
       const transaction = await tx.transaction.create({
         data: {
           userId: user.id,
-          targetPhone: phone,
+          targetPhone: normalizedPhone,
           operator: operator,
           amount: amount,
           circleCode: circleCode || null,
+          provider: provider as "A1TOPUP" | "REALROBO" | "MROBOTICS",
           status: "PENDING",
           idempotencyKey: idempotencyKey || undefined
         }
@@ -113,68 +158,7 @@ export async function POST(req: Request) {
       return { transaction, distributorId: user.distributorId };
     });
 
-    let isSuccess = false;
-    let isPending = false;
-    let apiMessage = "Unknown error";
-    let apiReferenceId = "";
-
-    try {
-      const apiUrl = new URL("https://business.a1topup.com/recharge/api");
-      apiUrl.searchParams.append("username", process.env.A1TOPUP_USERNAME || "");
-      apiUrl.searchParams.append("pwd", process.env.A1TOPUP_PASSWORD || "");
-      apiUrl.searchParams.append("number", phone);
-      apiUrl.searchParams.append("operatorcode", getOperatorCode(operator));
-      if (circleCode) {
-        const numericCircleCode = getCircleCode(circleCode);
-        apiUrl.searchParams.append("circlecode", numericCircleCode);
-      }
-      apiUrl.searchParams.append("amount", amount.toString());
-      apiUrl.searchParams.append("orderid", result.transaction.id);
-      apiUrl.searchParams.append("format", "json");
-
-      console.log("A1Topup API URL:", apiUrl.toString());
-      console.log("Operator:", operator, "Code:", getOperatorCode(operator));
-      console.log("Circle Input:", circleCode, "Numeric Code:", circleCode ? getCircleCode(circleCode) : 'N/A');
-
-      const response = await fetch(apiUrl.toString(), { method: "GET" });
-      const textResponse = await response.text();
-      console.log("A1Topup API Response Status:", response.status);
-      console.log("A1Topup API Raw Response:", textResponse);
-      
-      let apiResponse;
-      try {
-        apiResponse = JSON.parse(textResponse);
-        console.log("A1Topup API Parsed Response:", apiResponse);
-      } catch (e) {
-        console.log("Failed to parse JSON response:", e);
-        apiResponse = { status: "error", message: textResponse };
-      }
-      
-      const statusStr = apiResponse.status ? apiResponse.status.toLowerCase() : "failed";
-      
-      if (statusStr === "success") {
-        isSuccess = true;
-        apiMessage = apiResponse.message || "Recharge successful";
-        const opidPart = apiResponse.opid ? ` [OPID: ${apiResponse.opid}]` : "";
-        apiReferenceId = (apiResponse.transaction_id || apiResponse.txid || `API-${Date.now()}`) + opidPart;
-      } else if (statusStr === "pending") {
-        isSuccess = false;
-        isPending = true;
-        apiMessage = apiResponse.message || "Recharge is pending with operator";
-        const opidPart = apiResponse.opid ? ` [OPID: ${apiResponse.opid}]` : "";
-        apiReferenceId = (apiResponse.transaction_id || apiResponse.txid || "") + opidPart;
-      } else {
-        isSuccess = false;
-        apiMessage = apiResponse.message || "Recharge failed at provider";
-        apiReferenceId = apiResponse.transaction_id || apiResponse.txid || "";
-      }
-    } catch (apiError) {
-       console.error("A1Topup API Error:", apiError);
-       isSuccess = false;
-       isPending = true; 
-       apiMessage = "Provider API timeout. Status unknown.";
-    }
-
+    // Get commission rules first
     const rule = await prisma.commissionRule.findUnique({ where: { operator } });
     const rMargin = rule ? rule.retailerMargin : 0;
     const dMargin = rule ? rule.distributorMargin : 0;
@@ -189,30 +173,67 @@ export async function POST(req: Request) {
     const adminCommission = aCommission + (hasDistributor ? 0 : dCommission);
     const distributorCommission = hasDistributor ? dCommission : 0;
 
-    if (isPending) {
-      const updatedTransaction = await prisma.transaction.update({
-        where: { id: result.transaction.id },
-        data: {
-          status: "PENDING",
-          apiMessage: apiMessage,
-          ...(apiReferenceId ? { apiReferenceId } : {})
+    // Validate provider credentials before making API calls
+    validateProviderCredentials(provider as 'A1TOPUP' | 'REALROBO' | 'MROBOTICS');
+    
+    // Call provider API
+    let apiResult;
+    try {
+      if (provider === "REALROBO") {
+        apiResult = await performRealRoboRecharge(
+          normalizedPhone,
+          operator,
+          amount,
+          circleCode,
+          result.transaction.id
+        );
+      } else if (provider === "MROBOTICS") {
+        apiResult = await performMRoboticsRecharge(
+          normalizedPhone,
+          operator,
+          amount,
+          circleCode,
+          result.transaction.id
+        );
+      } else {
+        // A1TopUp API call
+        const apiUrl = new URL("https://business.a1topup.com/recharge/api");
+        apiUrl.searchParams.append("username", process.env.A1TOPUP_USERNAME || "");
+        apiUrl.searchParams.append("pwd", process.env.A1TOPUP_PASSWORD || "");
+        apiUrl.searchParams.append("number", normalizedPhone);
+        apiUrl.searchParams.append("operatorcode", getOperatorCode(operator));
+        if (circleCode) {
+          const numericCircleCode = getCircleCode(circleCode);
+          apiUrl.searchParams.append("circlecode", numericCircleCode);
         }
-      });
-      return NextResponse.json({ 
-        success: true, 
-        message: "Recharge submitted and is currently pending",
-        transaction: updatedTransaction 
-      });
-    }
+        apiUrl.searchParams.append("amount", amount.toString());
+        apiUrl.searchParams.append("orderid", result.transaction.id);
+        apiUrl.searchParams.append("format", "json");
 
-    if (!isSuccess) {
+        const response = await fetch(apiUrl.toString(), { 
+          method: "GET",
+          signal: AbortSignal.timeout(30000) // 30 second timeout
+        });
+        const textResponse = await response.text();
+        
+        let apiResponse;
+        try {
+          apiResponse = JSON.parse(textResponse);
+        } catch (e) {
+          apiResponse = { status: "error", message: textResponse };
+        }
+        
+        apiResult = apiResponse;
+      }
+    } catch (apiError) {
+      // API call failed completely - treat as failure and refund
       const updatedTransaction = await prisma.$transaction(async (tx) => {
         const t = await tx.transaction.update({
           where: { id: result.transaction.id },
           data: {
             status: "REFUNDED",
-            apiMessage: apiMessage,
-            ...(apiReferenceId ? { apiReferenceId } : {})
+            apiMessage: "Provider API error. Please try again.",
+            apiReferenceId: null
           }
         });
         await tx.user.update({
@@ -223,54 +244,150 @@ export async function POST(req: Request) {
       });
       
       return NextResponse.json({ 
-        error: apiMessage,
+        error: "Provider API error. Please try again.",
         transaction: updatedTransaction 
       }, { status: 400 });
     }
 
-    const adminUser = adminCommission > 0 ? await prisma.user.findFirst({ where: { role: "ADMIN" } }) : null;
-
+    // Process API response in a single transaction
     const updatedTransaction = await prisma.$transaction(async (tx) => {
+      let finalStatus: "SUCCESS" | "FAILED" | "PENDING";
+      let apiMessage: string;
+      let apiReferenceId: string | null = null;
+      let shouldRefund = false;
+
+      if (provider === "REALROBO") {
+        const response = apiResult as any;
+        if (response.status === "success") {
+          finalStatus = "SUCCESS";
+          apiMessage = response.remark || response.message || "Recharge successful";
+          apiReferenceId = `${response.txid} [REQ_ID: ${response.req_id}]`;
+        } else if (response.status === "failure") {
+          finalStatus = "FAILED";
+          apiMessage = response.remark || response.message || "Recharge failed at provider";
+          apiReferenceId = `${response.txid} [REQ_ID: ${response.req_id}]`;
+          shouldRefund = true;
+        } else {
+          finalStatus = "PENDING";
+          apiMessage = response.remark || response.message || "Recharge status unknown";
+          apiReferenceId = `${response.txid} [REQ_ID: ${response.req_id}]`;
+        }
+      } else if (provider === "MROBOTICS") {
+        const response = apiResult as any;
+        if (response.status === "success") {
+          finalStatus = "SUCCESS";
+          apiMessage = response.response || response.errorMessage || "Recharge successful";
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+        } else if (response.status === "failure") {
+          finalStatus = "FAILED";
+          apiMessage = response.errorMessage || response.response || "Recharge failed at provider";
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+          shouldRefund = true;
+        } else if (response.status === "pending") {
+          finalStatus = "PENDING";
+          apiMessage = response.errorMessage || response.response || "Recharge is pending";
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+        } else {
+          finalStatus = "PENDING";
+          apiMessage = response.errorMessage || response.response || "Recharge status unknown";
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+        }
+      } else {
+        // A1TopUp response
+        const response = apiResult as any;
+        const statusStr = response.status ? response.status.toLowerCase() : "failed";
+        
+        if (statusStr === "success") {
+          finalStatus = "SUCCESS";
+          apiMessage = response.message || "Recharge successful";
+          const opidPart = response.opid ? ` [OPID: ${response.opid}]` : "";
+          apiReferenceId = (response.transaction_id || response.txid || `API-${Date.now()}`) + opidPart;
+        } else if (statusStr === "pending") {
+          finalStatus = "PENDING";
+          apiMessage = response.message || "Recharge is pending with operator";
+          const opidPart = response.opid ? ` [OPID: ${response.opid}]` : "";
+          apiReferenceId = (response.transaction_id || response.txid || "") + opidPart;
+        } else {
+          finalStatus = "FAILED";
+          apiMessage = response.message || "Recharge failed at provider";
+          apiReferenceId = response.transaction_id || response.txid || "";
+          shouldRefund = true;
+        }
+      }
+
+      // Update transaction
       const t = await tx.transaction.update({
         where: { id: result.transaction.id },
         data: {
-          status: "SUCCESS",
+          status: finalStatus,
           apiMessage: apiMessage,
           apiReferenceId: apiReferenceId,
-          retailerCommission: rCommission,
-          distributorCommission: distributorCommission,
-          adminCommission: adminCommission
+          ...(finalStatus === "SUCCESS" ? {
+            retailerCommission: rCommission,
+            distributorCommission: distributorCommission,
+            adminCommission: adminCommission
+          } : {})
         }
       });
 
-      if (rCommission > 0) {
+      // Handle refund if failed
+      if (shouldRefund) {
         await tx.user.update({
-          where: { id: session.user.id },
-          data: { earnings: { increment: rCommission } }
+           where: { id: session.user.id },
+           data: { balance: { increment: amount } }
         });
       }
 
-      if (distributorCommission > 0 && result.distributorId) {
-        await tx.user.update({
-          where: { id: result.distributorId },
-          data: { earnings: { increment: distributorCommission } }
-        });
+      // Update earnings if successful
+      if (finalStatus === "SUCCESS") {
+        if (rCommission > 0) {
+          await tx.user.update({
+            where: { id: session.user.id },
+            data: { earnings: { increment: rCommission } }
+          });
+        }
+
+        if (distributorCommission > 0 && result.distributorId) {
+          await tx.user.update({
+            where: { id: result.distributorId },
+            data: { earnings: { increment: distributorCommission } }
+          });
+        }
+
+        if (adminCommission > 0) {
+          const adminUser = await tx.user.findFirst({ where: { role: "ADMIN" } });
+          if (adminUser) {
+            await tx.user.update({
+              where: { id: adminUser.id },
+              data: { earnings: { increment: adminCommission } }
+            });
+          }
+        }
       }
 
-      if (adminCommission > 0 && adminUser) {
-        await tx.user.update({
-          where: { id: adminUser.id },
-          data: { earnings: { increment: adminCommission } }
-        });
-      }
-
-      return t;
+      return { transaction: t, status: finalStatus, message: apiMessage };
     });
 
+    // Handle different response types based on status
+    if (updatedTransaction.status === "PENDING") {
+      return NextResponse.json({ 
+        success: true, 
+        message: "Recharge submitted and is currently pending",
+        transaction: updatedTransaction.transaction 
+      });
+    }
+    
+    if (updatedTransaction.status === "FAILED") {
+      return NextResponse.json({ 
+        error: updatedTransaction.message,
+        transaction: updatedTransaction.transaction 
+      }, { status: 400 });
+    }
+    
     return NextResponse.json({ 
       success: true, 
       message: "Recharge completed successfully",
-      transaction: updatedTransaction 
+      transaction: updatedTransaction.transaction 
     });
 
   } catch (error: any) {

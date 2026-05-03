@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { LedgerDownloadButton } from "./components/download-button"
 
 export default async function DistributorLedgerPage() {
   const session = await auth.api.getSession({
@@ -30,7 +31,7 @@ export default async function DistributorLedgerPage() {
 
   const transactions = await prisma.transaction.findMany({
     where: {
-      userId: user.id
+      userId: user.id,
     },
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -54,10 +55,15 @@ export default async function DistributorLedgerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Ledger</h1>
-        <p className="mt-2 text-muted-foreground">
-          Your overarching wallet and transaction history.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Ledger</h1>
+            <p className="mt-2 text-muted-foreground">
+              Your overarching wallet and transaction history.
+            </p>
+          </div>
+          <LedgerDownloadButton data={transactions} />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-md border bg-card">
@@ -85,9 +91,15 @@ export default async function DistributorLedgerPage() {
               transactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>{tx.createdAt.toLocaleString()}</TableCell>
-                  <TableCell className="font-medium text-muted-foreground">{tx.operator}</TableCell>
-                  <TableCell className="font-bold">₹{tx.amount.toLocaleString()}</TableCell>
-                  <TableCell className="text-sm">{tx.apiMessage || "—"}</TableCell>
+                  <TableCell className="font-medium text-muted-foreground">
+                    {tx.operator}
+                  </TableCell>
+                  <TableCell className="font-bold">
+                    ₹{tx.amount.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {tx.apiMessage || "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"

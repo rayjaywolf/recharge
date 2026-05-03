@@ -25,6 +25,12 @@ enum TxStatus {
   REFUNDED
 }
 
+enum Provider {
+  A1TOPUP
+  REALROBO
+  MROBOTICS
+}
+
 
 model User {
   id            String        @id
@@ -67,6 +73,7 @@ model Transaction {
   operator       String
   amount         Int
   circleCode     String?
+  provider       Provider @default(REALROBO)
   status         TxStatus @default(PENDING)
   apiReferenceId String?  @unique
   apiMessage     String?

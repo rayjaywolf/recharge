@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { FilterBar } from "./components/filter-bar"
+import { TransactionsDownloadButton } from "./components/download-button"
 
 export default async function MasterLedgerPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -73,10 +74,15 @@ export default async function MasterLedgerPage(props: {
   return (
     <div className="animate-in space-y-6 duration-500 fade-in slide-in-from-bottom-3">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-        <p className="mt-1 text-muted-foreground">
-          View and filter all platform transactions.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
+            <p className="mt-1 text-muted-foreground">
+              View and filter all platform transactions.
+            </p>
+          </div>
+          <TransactionsDownloadButton data={transactions} />
+        </div>
       </div>
 
       <div className="flex flex-col space-y-4">
@@ -92,19 +98,22 @@ export default async function MasterLedgerPage(props: {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Date</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead>Retailer</TableHead>
-                <TableHead>Carrier & Phone</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Carrier</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Reference ID</TableHead>
+                <TableHead>Ref ID</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {transactions.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={9}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No transactions match your filters.
@@ -114,28 +123,40 @@ export default async function MasterLedgerPage(props: {
                 transactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {tx.createdAt.toLocaleDateString()}
-                        </span>
-                        <span className="text-xs">
-                          {tx.createdAt.toLocaleTimeString()}
-                        </span>
+                      <span className="font-medium text-foreground">
+                        {tx.createdAt.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                      <span className="text-xs">
+                        {tx.createdAt.toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm font-semibold">
+                        {tx.user.name}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-semibold">{tx.user.name}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="max-w-[120px] truncate text-xs text-muted-foreground">
                         {tx.user.email}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-semibold">{tx.operator}</div>
-                      <div className="font-mono text-sm tracking-tight text-muted-foreground">
+                      <div className="text-sm font-semibold">{tx.operator}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-mono text-xs tracking-tight text-muted-foreground">
                         {tx.targetPhone}
                       </div>
                     </TableCell>
-                    <TableCell className="font-bold">
+                    <TableCell className="text-sm font-bold">
                       ₹{tx.amount.toLocaleString()}
                     </TableCell>
                     <TableCell>
@@ -152,7 +173,7 @@ export default async function MasterLedgerPage(props: {
                       </div>
                     </TableCell>
                     <TableCell
-                      className="max-w-[150px] truncate font-mono text-xs text-muted-foreground"
+                      className="max-w-[100px] truncate font-mono text-xs text-muted-foreground"
                       title={tx.apiReferenceId || tx.id}
                     >
                       {tx.apiReferenceId || tx.id}

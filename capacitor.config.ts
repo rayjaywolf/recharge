@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'recharge',
   webDir: 'public',
   server: {
-    url: 'http://192.168.29.29:3000',
+    url: 'https://recharge-lilac.vercel.app',
     cleartext: true
   }
 };

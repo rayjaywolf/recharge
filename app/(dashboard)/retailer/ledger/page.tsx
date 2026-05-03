@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { LedgerDownloadButton } from "./components/download-button"
 
 export default async function RetailerLedgerPage() {
   const session = await auth.api.getSession({
@@ -59,10 +60,15 @@ export default async function RetailerLedgerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Ledger</h1>
-        <p className="mt-2 text-muted-foreground">
-          Your recent recharge transactions.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Ledger</h1>
+            <p className="mt-2 text-muted-foreground">
+              Your recent recharge transactions.
+            </p>
+          </div>
+          <LedgerDownloadButton data={transactions} />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-md border bg-card">

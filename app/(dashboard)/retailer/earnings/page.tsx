@@ -2,10 +2,22 @@ import { auth, prisma } from "@/lib/auth"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card"
 import { Landmark } from "lucide-react"
+import { EarningsDownloadButton } from "./components/download-button"
 
 export default async function RetailerEarningsPage() {
   const session = await auth.api.getSession({
@@ -17,17 +29,17 @@ export default async function RetailerEarningsPage() {
   const user = await prisma.user.findUnique({ where: { id: session.user.id } })
 
   const transactions = await prisma.transaction.findMany({
-    where: { 
+    where: {
       userId: session.user.id,
-      retailerCommission: { gt: 0 } 
+      retailerCommission: { gt: 0 },
     },
     orderBy: { createdAt: "desc" },
-    take: 50
+    take: 50,
   })
 
   const aggregate = await prisma.transaction.aggregate({
     where: { userId: session.user.id },
-    _sum: { retailerCommission: true }
+    _sum: { retailerCommission: true },
   })
   const totalEarnings = aggregate._sum.retailerCommission || 0
 
@@ -43,7 +55,9 @@ export default async function RetailerEarningsPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Retailer Earnings</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Retailer Earnings
+            </CardTitle>
             <Landmark className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -59,10 +73,15 @@ export default async function RetailerEarningsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Earnings Ledger</CardTitle>
-          <CardDescription>
-            Your last 50 transactions that generated commission.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Recent Earnings Ledger</CardTitle>
+              <CardDescription>
+                Your last 50 transactions that generated commission.
+              </CardDescription>
+            </div>
+            <EarningsDownloadButton data={transactions} />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -78,7 +97,10 @@ export default async function RetailerEarningsPage() {
             <TableBody>
               {transactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                  <TableCell
+                    colSpan={5}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     No earnings recorded yet.
                   </TableCell>
                 </TableRow>
@@ -88,9 +110,13 @@ export default async function RetailerEarningsPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {tx.createdAt.toLocaleString()}
                     </TableCell>
-                    <TableCell className="font-mono">{tx.targetPhone}</TableCell>
+                    <TableCell className="font-mono">
+                      {tx.targetPhone}
+                    </TableCell>
                     <TableCell>{tx.operator}</TableCell>
-                    <TableCell className="text-right font-mono text-muted-foreground">₹{tx.amount}</TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground">
+                      ₹{tx.amount}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       +₹{tx.retailerCommission.toFixed(2)}
                     </TableCell>

@@ -1,13 +1,19 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RechargeForm } from "../components/recharge-form";
-import { prisma } from "@/lib/auth";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { RechargeForm } from "../components/recharge-form"
+import { prisma } from "@/lib/auth"
 
 export default async function RetailerRechargePage() {
   const rules = await prisma.commissionRule.findMany({
     select: { operator: true },
-    orderBy: { operator: "asc" }
-  });
-  const availableOperators = rules.map(r => r.operator);
+    orderBy: { operator: "asc" },
+  })
+  const availableOperators = rules.map((r) => r.operator)
 
   return (
     <div className="space-y-6">
@@ -30,5 +36,5 @@ export default async function RetailerRechargePage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

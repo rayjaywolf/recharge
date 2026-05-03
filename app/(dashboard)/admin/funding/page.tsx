@@ -2,6 +2,7 @@ import { auth, prisma } from "@/lib/auth"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { BankControls } from "./components/bank-controls"
+import { FundingDownloadButton } from "./components/download-button"
 import {
   Table,
   TableBody,
@@ -58,7 +59,10 @@ export default async function BankControlPage() {
 
         {/* Right Side: Ledger */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold">Funding History</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Funding History</h2>
+            <FundingDownloadButton data={bankLedger} />
+          </div>
           <div className="overflow-hidden rounded-md border bg-card">
             <Table>
               <TableHeader>

@@ -10,6 +10,9 @@ import {
   Wallet,
   CreditCard,
   ClipboardCheck,
+  DollarSign,
+  TrendingUp,
+  Receipt,
 } from "lucide-react"
 
 import {
@@ -32,46 +35,55 @@ export function AppSidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
 
-  const navLinks = userRole === "ADMIN"
-    ? [
-        { name: "Overview", href: "/admin", icon: LayoutDashboard },
-        { name: "Approvals", href: "/admin/approvals", icon: ClipboardCheck },
-        { name: "Users", href: "/admin/users", icon: Users },
-        { name: "Funding", href: "/admin/funding", icon: Landmark },
-        { name: "Ledger", href: "/admin/transactions", icon: History },
-        { name: "Commissions", href: "/admin/commissions", icon: FileText },
-        { name: "Earnings", href: "/admin/earnings", icon: Landmark },
-      ]
-    : userRole === "DISTRIBUTOR"
-    ? [
-        { name: "Overview", href: "/distributor", icon: LayoutDashboard },
-        { name: "Recharge", href: "/distributor/recharge", icon: CreditCard },
-        { name: "Retailers", href: "/distributor/retailers", icon: Users },
-        { name: "Ledger", href: "/distributor/ledger", icon: FileText },
-        { name: "Funds", href: "/distributor/funds", icon: Wallet },
-        { name: "Commissions", href: "/distributor/commissions", icon: FileText },
-        { name: "Earnings", href: "/distributor/earnings", icon: Landmark },
-      ]
-    : [
-        { name: "Overview", href: "/retailer", icon: LayoutDashboard },
-        { name: "Recharge", href: "/retailer/recharge", icon: CreditCard },
-        { name: "Ledger", href: "/retailer/ledger", icon: FileText },
-        {
-          name: "Funds",
-          href: "/retailer/funds",
-          icon: Wallet,
-        },
-        {
-          name: "Commissions",
-          href: "/retailer/commissions",
-          icon: FileText,
-        },
-        {
-          name: "Earnings",
-          href: "/retailer/earnings",
-          icon: Landmark,
-        },
-      ]
+  const navLinks =
+    userRole === "ADMIN"
+      ? [
+          { name: "Overview", href: "/admin", icon: LayoutDashboard },
+          { name: "Approvals", href: "/admin/approvals", icon: ClipboardCheck },
+          { name: "Users", href: "/admin/users", icon: Users },
+          { name: "Funding", href: "/admin/funding", icon: Wallet },
+          { name: "Ledger", href: "/admin/transactions", icon: History },
+          { name: "Commissions", href: "/admin/commissions", icon: Receipt },
+          { name: "Earnings", href: "/admin/earnings", icon: TrendingUp },
+        ]
+      : userRole === "DISTRIBUTOR"
+        ? [
+            { name: "Overview", href: "/distributor", icon: LayoutDashboard },
+            {
+              name: "Recharge",
+              href: "/distributor/recharge",
+              icon: CreditCard,
+            },
+            { name: "Retailers", href: "/distributor/retailers", icon: Users },
+            { name: "Ledger", href: "/distributor/ledger", icon: FileText },
+            { name: "Funds", href: "/distributor/funds", icon: Wallet },
+            {
+              name: "Commissions",
+              href: "/distributor/commissions",
+              icon: FileText,
+            },
+            { name: "Earnings", href: "/distributor/earnings", icon: Landmark },
+          ]
+        : [
+            { name: "Overview", href: "/retailer", icon: LayoutDashboard },
+            { name: "Recharge", href: "/retailer/recharge", icon: CreditCard },
+            { name: "Ledger", href: "/retailer/ledger", icon: FileText },
+            {
+              name: "Funds",
+              href: "/retailer/funds",
+              icon: Wallet,
+            },
+            {
+              name: "Commissions",
+              href: "/retailer/commissions",
+              icon: FileText,
+            },
+            {
+              name: "Earnings",
+              href: "/retailer/earnings",
+              icon: Landmark,
+            },
+          ]
 
   return (
     <Sidebar collapsible="icon">
@@ -90,12 +102,15 @@ export function AppSidebar({ userRole }: { userRole: string }) {
           <SidebarMenu>
             {navLinks.map((link) => {
               const Icon = link.icon
-              const baseHref = userRole === "ADMIN" ? "/admin" : userRole === "DISTRIBUTOR" ? "/distributor" : "/retailer"
+              const baseHref =
+                userRole === "ADMIN"
+                  ? "/admin"
+                  : userRole === "DISTRIBUTOR"
+                    ? "/distributor"
+                    : "/retailer"
               const isActive =
                 pathname === link.href ||
-                (link.href !== baseHref &&
-                  pathname.startsWith(`${link.href}/`))
-
+                (link.href !== baseHref && pathname.startsWith(`${link.href}/`))
 
               return (
                 <SidebarMenuItem key={link.href}>

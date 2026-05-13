@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -8,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ReceiptActions } from "./receipt-actions"
 
 type ConfirmationPageProps = {
   searchParams: Promise<{
@@ -74,14 +74,11 @@ export default async function RechargeConfirmationPage({
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
-            <Button asChild>
-              <Link href="/retailer/recharge">Do Another Recharge</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/retailer/ledger">View Ledger</Link>
-            </Button>
-          </div>
+          <ReceiptActions 
+            isSuccess={isSuccess} 
+            phone={params.phone || ""} 
+            amount={params.amount || ""} 
+          />
         </CardContent>
       </Card>
     </div>

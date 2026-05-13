@@ -179,6 +179,15 @@ export async function POST(req: Request) {
     // Call provider API
     let apiResult;
     try {
+      console.log("=== RECHARGE INITIATED ===");
+      console.log("Provider:", provider);
+      console.log("Phone:", normalizedPhone);
+      console.log("Operator:", operator);
+      console.log("Amount:", amount);
+      console.log("Circle Code:", circleCode);
+      console.log("Transaction ID:", result.transaction.id);
+      console.log("========================");
+      
       if (provider === "REALROBO") {
         apiResult = await performRealRoboRecharge(
           normalizedPhone,
@@ -187,6 +196,9 @@ export async function POST(req: Request) {
           circleCode,
           result.transaction.id
         );
+        console.log("=== REALROBO API RESPONSE ===");
+        console.log(JSON.stringify(apiResult, null, 2));
+        console.log("==============================");
       } else if (provider === "MROBOTICS") {
         apiResult = await performMRoboticsRecharge(
           normalizedPhone,
@@ -195,6 +207,9 @@ export async function POST(req: Request) {
           circleCode,
           result.transaction.id
         );
+        console.log("=== MROBOTICS API RESPONSE ===");
+        console.log(JSON.stringify(apiResult, null, 2));
+        console.log("===============================");
       } else {
         // A1TopUp API call
         const apiUrl = new URL("https://business.a1topup.com/recharge/api");
@@ -224,6 +239,11 @@ export async function POST(req: Request) {
         }
         
         apiResult = apiResponse;
+        
+        console.log("=== A1TOPUP API RESPONSE ===");
+        console.log("Request URL:", apiUrl.toString());
+        console.log("Response:", JSON.stringify(apiResponse, null, 2));
+        console.log("=============================");
       }
     } catch (apiError) {
       // API call failed completely - treat as failure and refund
@@ -277,20 +297,20 @@ export async function POST(req: Request) {
         if (response.status === "success") {
           finalStatus = "SUCCESS";
           apiMessage = response.response || response.errorMessage || "Recharge successful";
-          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}] [TX_ID: ${result.transaction.id}]`;
         } else if (response.status === "failure") {
           finalStatus = "FAILED";
           apiMessage = response.errorMessage || response.response || "Recharge failed at provider";
-          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}] [TX_ID: ${result.transaction.id}]`;
           shouldRefund = true;
         } else if (response.status === "pending") {
           finalStatus = "PENDING";
           apiMessage = response.errorMessage || response.response || "Recharge is pending";
-          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}] [TX_ID: ${result.transaction.id}]`;
         } else {
           finalStatus = "PENDING";
           apiMessage = response.errorMessage || response.response || "Recharge status unknown";
-          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}]`;
+          apiReferenceId = `${response.tnx_id || ''} [ORDER_ID: ${response.id || ''}] [TX_ID: ${result.transaction.id}]`;
         }
       } else {
         // A1TopUp response
@@ -301,16 +321,16 @@ export async function POST(req: Request) {
           finalStatus = "SUCCESS";
           apiMessage = response.message || "Recharge successful";
           const opidPart = response.opid ? ` [OPID: ${response.opid}]` : "";
-          apiReferenceId = (response.transaction_id || response.txid || `API-${Date.now()}`) + opidPart;
+          apiReferenceId = (response.transaction_id || response.txid || `API-${Date.now()}`) + opidPart + ` [TX_ID: ${result.transaction.id}]`;
         } else if (statusStr === "pending") {
           finalStatus = "PENDING";
           apiMessage = response.message || "Recharge is pending with operator";
           const opidPart = response.opid ? ` [OPID: ${response.opid}]` : "";
-          apiReferenceId = (response.transaction_id || response.txid || "") + opidPart;
+          apiReferenceId = (response.transaction_id || response.txid || "") + opidPart + ` [TX_ID: ${result.transaction.id}]`;
         } else {
           finalStatus = "FAILED";
           apiMessage = response.message || "Recharge failed at provider";
-          apiReferenceId = response.transaction_id || response.txid || "";
+          apiReferenceId = (response.transaction_id || response.txid || "") + ` [TX_ID: ${result.transaction.id}]`;
           shouldRefund = true;
         }
       }

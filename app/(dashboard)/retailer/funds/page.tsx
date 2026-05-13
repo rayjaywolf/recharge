@@ -1,27 +1,33 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { auth, prisma } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 export default async function RetailerFundsPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
-  });
+  })
 
   if (!session) {
-    redirect("/login");
+    redirect("/login")
   }
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-  });
+  })
 
   if (!user) {
-    redirect("/login");
+    redirect("/login")
   }
 
   if (user.role === "ADMIN") {
-    redirect("/admin");
+    redirect("/admin")
   }
 
   return (
@@ -47,5 +53,5 @@ export default async function RetailerFundsPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

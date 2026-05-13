@@ -3,6 +3,7 @@
 import { Bell, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useMemo } from "react"
+import { useRouter, usePathname } from "next/navigation"
 
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { LogoutButton } from "@/components/logout-button"
@@ -46,6 +47,11 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const storageKey = `retailer-notifications-read:${userId}`
   const { readIds, persistReadIds } = useNotificationReadIds(storageKey)
+  const router = useRouter()
+  const pathname = usePathname()
+  
+  // Basic heuristic: if we are deeper than /retailer (e.g. /retailer/recharge) it's a subpage
+  const isSubPage = pathname.split("/").filter(Boolean).length > 1
 
   const unreadNotifications = useMemo(
     () =>
@@ -67,8 +73,18 @@ export function DashboardHeader({
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-4">
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/70 bg-background/70 px-4 backdrop-blur supports-backdrop-filter:bg-background/60">
       <SidebarTrigger className="-ml-1" />
+      {isSubPage && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="md:hidden" 
+          onClick={() => router.back()}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        </Button>
+      )}
 
       <div className="gap- ml-auto flex items-center gap-3">
         <div className="hidden flex-col text-right sm:flex">

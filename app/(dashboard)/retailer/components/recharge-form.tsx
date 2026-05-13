@@ -11,7 +11,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import { ChevronDown, Loader2 } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export function RechargeForm({
   availableOperators,
@@ -27,6 +38,9 @@ export function RechargeForm({
   const [idempotencyKey, setIdempotencyKey] = useState("")
   const isSubmitting = React.useRef(false)
   const router = useRouter()
+  const isMobile = useIsMobile()
+  const [providerOpen, setProviderOpen] = useState(false)
+  const [operatorOpen, setOperatorOpen] = useState(false)
 
   // Polyfill for crypto.randomUUID() in mobile/Capacitor environments
   const generateUUID = () => {
@@ -118,7 +132,8 @@ export function RechargeForm({
         <Label htmlFor="phone">Phone Number</Label>
         <Input
           id="phone"
-          type="tel"
+          type="number"
+          inputMode="decimal"
           placeholder="9876543210"
           required
           value={phone}
@@ -129,59 +144,134 @@ export function RechargeForm({
       <div className="grid gap-2">
         <Label htmlFor="provider">Provider</Label>
         <input type="hidden" name="provider" value={provider} required />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="provider"
-              type="button"
-              variant="outline"
-              className="w-full justify-between font-normal"
-            >
-              {provider === "REALROBO"
-                ? "RealRobo"
-                : provider === "MROBOTICS"
-                  ? "MRobotics"
-                  : "A1TopUp"}
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => setProvider("REALROBO")}>
-              RealRobo (Default)
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setProvider("MROBOTICS")}>
-              MRobotics
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setProvider("A1TOPUP")}>
-              A1TopUp
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isMobile ? (
+          <Drawer open={providerOpen} onOpenChange={setProviderOpen}>
+            <DrawerTrigger asChild>
+              <Button
+                id="provider"
+                type="button"
+                variant="outline"
+                className="w-full justify-between font-normal select-none"
+              >
+                {provider === "REALROBO"
+                  ? "RealRobo"
+                  : provider === "MROBOTICS"
+                    ? "MRobotics"
+                    : "A1TopUp"}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Select Provider</DrawerTitle>
+                <DrawerDescription>Choose the recharge provider gateway.</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 grid gap-2">
+                <Button variant="outline" className="select-none" onClick={() => { setProvider("REALROBO"); setProviderOpen(false) }}>RealRobo (Default)</Button>
+                <Button variant="outline" className="select-none" onClick={() => { setProvider("MROBOTICS"); setProviderOpen(false) }}>MRobotics</Button>
+                <Button variant="outline" className="select-none" onClick={() => { setProvider("A1TOPUP"); setProviderOpen(false) }}>A1TopUp</Button>
+              </div>
+              <DrawerFooter className="pt-2">
+                <DrawerClose asChild>
+                  <Button variant="ghost">Cancel</Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <DropdownMenu open={providerOpen} onOpenChange={setProviderOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="provider"
+                type="button"
+                variant="outline"
+                className="w-full justify-between font-normal select-none"
+              >
+                {provider === "REALROBO"
+                  ? "RealRobo"
+                  : provider === "MROBOTICS"
+                    ? "MRobotics"
+                    : "A1TopUp"}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width]">
+              <DropdownMenuItem onSelect={() => setProvider("REALROBO")}>
+                RealRobo (Default)
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setProvider("MROBOTICS")}>
+                MRobotics
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setProvider("A1TOPUP")}>
+                A1TopUp
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="grid gap-2">
         <Label htmlFor="operator">Operator</Label>
         <input type="hidden" name="operator" value={operator} required />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="operator"
-              type="button"
-              variant="outline"
-              className="w-full justify-between font-normal"
-            >
-              {operator ? operator : "Select an operator"}
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {availableOperators.map((item) => (
-              <DropdownMenuItem key={item} onSelect={() => setOperator(item)}>
-                {item}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isMobile ? (
+          <Drawer open={operatorOpen} onOpenChange={setOperatorOpen}>
+            <DrawerTrigger asChild>
+              <Button
+                id="operator"
+                type="button"
+                variant="outline"
+                className="w-full justify-between font-normal select-none"
+              >
+                {operator ? operator : "Select an operator"}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Select Operator</DrawerTitle>
+                <DrawerDescription>Choose the operator for the recharge.</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-2 overflow-y-auto max-h-[50vh]">
+                {availableOperators.map((item) => (
+                  <Button
+                    key={item}
+                    variant="outline"
+                    className="justify-start select-none"
+                    onClick={() => { setOperator(item); setOperatorOpen(false); }}
+                  >
+                    {item}
+                  </Button>
+                ))}
+              </div>
+              <DrawerFooter className="pt-2">
+                <DrawerClose asChild>
+                  <Button variant="ghost">Cancel</Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <DropdownMenu open={operatorOpen} onOpenChange={setOperatorOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="operator"
+                type="button"
+                variant="outline"
+                className="w-full justify-between font-normal select-none"
+              >
+                {operator ? operator : "Select an operator"}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width] max-h-[300px] overflow-y-auto">
+              {availableOperators.map((item) => (
+                <DropdownMenuItem key={item} onSelect={() => setOperator(item)}>
+                  {item}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="grid gap-2">
@@ -189,6 +279,7 @@ export function RechargeForm({
         <Input
           id="amount"
           type="number"
+          inputMode="decimal"
           min="1"
           placeholder="100"
           required
@@ -211,7 +302,7 @@ export function RechargeForm({
         </p>
       </div>
 
-      <Button className="mt-2 w-full" type="submit" disabled={loading}>
+      <Button className="mt-2 w-full select-none" type="submit" disabled={loading}>
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
         Initiate Recharge
       </Button>

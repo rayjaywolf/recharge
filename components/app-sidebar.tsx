@@ -13,6 +13,11 @@ import {
   DollarSign,
   TrendingUp,
   Receipt,
+  Store,
+  Building,
+  PieChart,
+  Calculator,
+  ArrowUpCircle,
 } from "lucide-react"
 
 import {
@@ -43,7 +48,7 @@ export function AppSidebar({ userRole }: { userRole: string }) {
           { name: "Users", href: "/admin/users", icon: Users },
           { name: "Funding", href: "/admin/funding", icon: Wallet },
           { name: "Ledger", href: "/admin/transactions", icon: History },
-          { name: "Commissions", href: "/admin/commissions", icon: Receipt },
+          { name: "Commissions", href: "/admin/commissions", icon: PieChart },
           { name: "Earnings", href: "/admin/earnings", icon: TrendingUp },
         ]
       : userRole === "DISTRIBUTOR"
@@ -55,19 +60,23 @@ export function AppSidebar({ userRole }: { userRole: string }) {
               icon: CreditCard,
             },
             { name: "Retailers", href: "/distributor/retailers", icon: Users },
-            { name: "Ledger", href: "/distributor/ledger", icon: FileText },
+            { name: "Ledger", href: "/distributor/ledger", icon: History },
             { name: "Funds", href: "/distributor/funds", icon: Wallet },
             {
               name: "Commissions",
               href: "/distributor/commissions",
-              icon: FileText,
+              icon: PieChart,
             },
-            { name: "Earnings", href: "/distributor/earnings", icon: Landmark },
+            {
+              name: "Earnings",
+              href: "/distributor/earnings",
+              icon: TrendingUp,
+            },
           ]
         : [
             { name: "Overview", href: "/retailer", icon: LayoutDashboard },
             { name: "Recharge", href: "/retailer/recharge", icon: CreditCard },
-            { name: "Ledger", href: "/retailer/ledger", icon: FileText },
+            { name: "Ledger", href: "/retailer/ledger", icon: History },
             {
               name: "Funds",
               href: "/retailer/funds",
@@ -76,12 +85,12 @@ export function AppSidebar({ userRole }: { userRole: string }) {
             {
               name: "Commissions",
               href: "/retailer/commissions",
-              icon: FileText,
+              icon: PieChart,
             },
             {
               name: "Earnings",
               href: "/retailer/earnings",
-              icon: Landmark,
+              icon: TrendingUp,
             },
           ]
 

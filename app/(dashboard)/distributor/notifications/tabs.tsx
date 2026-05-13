@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useNotificationReadIds } from "@/hooks/use-notification-read-ids"
 
-type RetailerNotification = {
+type DistributorNotification = {
   id: string
   title: string
   description: string
@@ -15,14 +15,14 @@ type RetailerNotification = {
 
 type NotificationsTabsProps = {
   userId: string
-  notifications: RetailerNotification[]
+  notifications: DistributorNotification[]
 }
 
 export function NotificationsTabs({
   userId,
   notifications,
 }: NotificationsTabsProps) {
-  const storageKey = `retailer-notifications-read:${userId}`
+  const storageKey = `distributor-notifications-read:${userId}`
   const { readIds, persistReadIds } = useNotificationReadIds(storageKey)
 
   const unread = useMemo(

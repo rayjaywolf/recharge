@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardHeader } from "@/components/dashboard-header"
 
@@ -148,8 +149,10 @@ export default async function DashboardLayout({
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar userRole={user.role} />
-        <SidebarInset>
+        <div className="hidden md:block">
+          <AppSidebar userRole={user.role} />
+        </div>
+        <SidebarInset className="pb-16 md:pb-0">
           <DashboardHeader
             userName={user.name}
             userRole={user.role}
@@ -164,6 +167,7 @@ export default async function DashboardLayout({
             <div className="mx-auto">{children}</div>
           </main>
         </SidebarInset>
+        <MobileBottomNav userRole={user.role} />
       </SidebarProvider>
     </TooltipProvider>
   )

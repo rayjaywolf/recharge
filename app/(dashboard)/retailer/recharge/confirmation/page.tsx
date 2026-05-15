@@ -74,11 +74,7 @@ export default async function RechargeConfirmationPage({
             </div>
           )}
 
-          <ReceiptActions 
-            isSuccess={isSuccess} 
-            phone={params.phone || ""} 
-            amount={params.amount || ""} 
-          />
+          <ReceiptActions />
         </CardContent>
       </Card>
     </div>

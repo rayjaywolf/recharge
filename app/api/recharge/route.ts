@@ -4,6 +4,9 @@ import { headers } from "next/headers";
 import { performRealRoboRecharge, checkRealRoboStatus } from "@/lib/realrobo";
 import { performMRoboticsRecharge, checkMRoboticsStatus } from "@/lib/mrobotics";
 import { validateProviderCredentials } from "@/lib/env-validation";
+import { performTestRecharge } from "@/lib/test-provider";
+
+type RechargeProviderId = "A1TOPUP" | "REALROBO" | "MROBOTICS" | "TEST";
 
 function getOperatorCode(opName: string): string {
   const normalized = opName.toLowerCase();
@@ -97,7 +100,19 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { phone, operator, amount, circleCode, idempotencyKey, provider = "REALROBO" } = body;
+    const { phone, operator, amount, circleCode, idempotencyKey, provider = "TEST" } = body;
+
+    const providerId = provider as RechargeProviderId;
+    const allowedProviders: RechargeProviderId[] = [
+      "TEST",
+      "REALROBO",
+      "MROBOTICS",
+      "A1TOPUP",
+    ];
+
+    if (!allowedProviders.includes(providerId)) {
+      return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
+    }
 
     if (!phone || !operator || !amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -149,7 +164,7 @@ export async function POST(req: Request) {
           operator: operator,
           amount: amount,
           circleCode: circleCode || null,
-          provider: provider as "A1TOPUP" | "REALROBO" | "MROBOTICS",
+          provider: providerId,
           status: "PENDING",
           idempotencyKey: idempotencyKey || undefined
         }
@@ -174,13 +189,13 @@ export async function POST(req: Request) {
     const distributorCommission = hasDistributor ? dCommission : 0;
 
     // Validate provider credentials before making API calls
-    validateProviderCredentials(provider as 'A1TOPUP' | 'REALROBO' | 'MROBOTICS');
+    validateProviderCredentials(providerId);
     
     // Call provider API
     let apiResult;
     try {
       console.log("=== RECHARGE INITIATED ===");
-      console.log("Provider:", provider);
+      console.log("Provider:", providerId);
       console.log("Phone:", normalizedPhone);
       console.log("Operator:", operator);
       console.log("Amount:", amount);
@@ -188,7 +203,18 @@ export async function POST(req: Request) {
       console.log("Transaction ID:", result.transaction.id);
       console.log("========================");
       
-      if (provider === "REALROBO") {
+      if (providerId === "TEST") {
+        apiResult = await performTestRecharge(
+          normalizedPhone,
+          operator,
+          amount,
+          result.transaction.id,
+          circleCode
+        );
+        console.log("=== TEST PROVIDER RESPONSE ===");
+        console.log(JSON.stringify(apiResult, null, 2));
+        console.log("==============================");
+      } else if (providerId === "REALROBO") {
         apiResult = await performRealRoboRecharge(
           normalizedPhone,
           operator,
@@ -199,7 +225,7 @@ export async function POST(req: Request) {
         console.log("=== REALROBO API RESPONSE ===");
         console.log(JSON.stringify(apiResult, null, 2));
         console.log("==============================");
-      } else if (provider === "MROBOTICS") {
+      } else if (providerId === "MROBOTICS") {
         apiResult = await performMRoboticsRecharge(
           normalizedPhone,
           operator,
@@ -276,7 +302,27 @@ export async function POST(req: Request) {
       let apiReferenceId: string | null = null;
       let shouldRefund = false;
 
-      if (provider === "REALROBO") {
+      if (providerId === "TEST") {
+        const response = apiResult as {
+          status: string;
+          message: string;
+          referenceId: string;
+        };
+        if (response.status === "success") {
+          finalStatus = "SUCCESS";
+          apiMessage = response.message;
+          apiReferenceId = response.referenceId;
+        } else if (response.status === "failure") {
+          finalStatus = "FAILED";
+          apiMessage = response.message;
+          apiReferenceId = response.referenceId;
+          shouldRefund = true;
+        } else {
+          finalStatus = "PENDING";
+          apiMessage = response.message;
+          apiReferenceId = response.referenceId;
+        }
+      } else if (providerId === "REALROBO") {
         const response = apiResult as any;
         if (response.status === "success") {
           finalStatus = "SUCCESS";
@@ -292,7 +338,7 @@ export async function POST(req: Request) {
           apiMessage = response.remark || response.message || "Recharge status unknown";
           apiReferenceId = `${response.txid} [REQ_ID: ${response.req_id}]`;
         }
-      } else if (provider === "MROBOTICS") {
+      } else if (providerId === "MROBOTICS") {
         const response = apiResult as any;
         if (response.status === "success") {
           finalStatus = "SUCCESS";

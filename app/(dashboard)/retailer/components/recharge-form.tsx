@@ -33,7 +33,7 @@ export function RechargeForm({
   const [operator, setOperator] = useState("")
   const [amount, setAmount] = useState("")
   const [circleCode, setCircleCode] = useState("")
-  const [provider, setProvider] = useState("REALROBO")
+  const [provider, setProvider] = useState("TEST")
   const [loading, setLoading] = useState(false)
   const [idempotencyKey, setIdempotencyKey] = useState("")
   const isSubmitting = React.useRef(false)
@@ -42,7 +42,7 @@ export function RechargeForm({
   const [providerOpen, setProviderOpen] = useState(false)
   const [operatorOpen, setOperatorOpen] = useState(false)
 
-  // Polyfill for crypto.randomUUID() in mobile/Capacitor environments
+  // Polyfill for crypto.randomUUID() when unavailable
   const generateUUID = () => {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
       return crypto.randomUUID()
@@ -153,11 +153,13 @@ export function RechargeForm({
                 variant="outline"
                 className="w-full justify-between font-normal select-none"
               >
-                {provider === "REALROBO"
-                  ? "RealRobo"
-                  : provider === "MROBOTICS"
-                    ? "MRobotics"
-                    : "A1TopUp"}
+                {provider === "TEST"
+                  ? "Test (simulated)"
+                  : provider === "REALROBO"
+                    ? "RealRobo"
+                    : provider === "MROBOTICS"
+                      ? "MRobotics"
+                      : "A1TopUp"}
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DrawerTrigger>
@@ -167,7 +169,8 @@ export function RechargeForm({
                 <DrawerDescription>Choose the recharge provider gateway.</DrawerDescription>
               </DrawerHeader>
               <div className="p-4 grid gap-2">
-                <Button variant="outline" className="select-none" onClick={() => { setProvider("REALROBO"); setProviderOpen(false) }}>RealRobo (Default)</Button>
+                <Button variant="outline" className="select-none" onClick={() => { setProvider("TEST"); setProviderOpen(false) }}>Test (simulated)</Button>
+                <Button variant="outline" className="select-none" onClick={() => { setProvider("REALROBO"); setProviderOpen(false) }}>RealRobo</Button>
                 <Button variant="outline" className="select-none" onClick={() => { setProvider("MROBOTICS"); setProviderOpen(false) }}>MRobotics</Button>
                 <Button variant="outline" className="select-none" onClick={() => { setProvider("A1TOPUP"); setProviderOpen(false) }}>A1TopUp</Button>
               </div>
@@ -187,17 +190,22 @@ export function RechargeForm({
                 variant="outline"
                 className="w-full justify-between font-normal select-none"
               >
-                {provider === "REALROBO"
-                  ? "RealRobo"
-                  : provider === "MROBOTICS"
-                    ? "MRobotics"
-                    : "A1TopUp"}
+                {provider === "TEST"
+                  ? "Test (simulated)"
+                  : provider === "REALROBO"
+                    ? "RealRobo"
+                    : provider === "MROBOTICS"
+                      ? "MRobotics"
+                      : "A1TopUp"}
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width]">
+              <DropdownMenuItem onSelect={() => setProvider("TEST")}>
+                Test (simulated)
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setProvider("REALROBO")}>
-                RealRobo (Default)
+                RealRobo
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setProvider("MROBOTICS")}>
                 MRobotics

@@ -48,7 +48,15 @@ export function validateEnvironmentVariables(): void {
   }
 }
 
-export function validateProviderCredentials(provider: 'A1TOPUP' | 'REALROBO' | 'MROBOTICS'): void {
+export type LiveProvider = 'A1TOPUP' | 'REALROBO' | 'MROBOTICS';
+
+export function validateProviderCredentials(
+  provider: LiveProvider | 'TEST'
+): void {
+  if (provider === 'TEST') {
+    return;
+  }
+
   switch (provider) {
     case 'A1TOPUP':
       if (!process.env.A1TOPUP_USERNAME || !process.env.A1TOPUP_PASSWORD) {
@@ -68,8 +76,8 @@ export function validateProviderCredentials(provider: 'A1TOPUP' | 'REALROBO' | '
   }
 }
 
-export function getAvailableProviders(): ('A1TOPUP' | 'REALROBO' | 'MROBOTICS')[] {
-  const providers: ('A1TOPUP' | 'REALROBO' | 'MROBOTICS')[] = [];
+export function getAvailableProviders(): LiveProvider[] {
+  const providers: LiveProvider[] = [];
   
   if (process.env.A1TOPUP_USERNAME && process.env.A1TOPUP_PASSWORD) {
     providers.push('A1TOPUP');

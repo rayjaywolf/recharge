@@ -12,6 +12,13 @@ export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
+    trustedOrigins: [
+        "http://localhost:3000",
+        process.env.BETTER_AUTH_URL,
+        // Flutter / Expo clients (flutter_better_auth)
+        "flutter://",
+        "exp://",
+    ].filter((origin): origin is string => Boolean(origin)),
     user: {
         additionalFields: {
             role: {

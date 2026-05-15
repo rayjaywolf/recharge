@@ -29,6 +29,14 @@ enum Provider {
   A1TOPUP
   REALROBO
   MROBOTICS
+  TEST
+}
+
+enum FundRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 
@@ -55,7 +63,9 @@ model User {
   distributorId String?
   distributor   User?         @relation("DistributorToRetailer", fields: [distributorId], references: [id])
   retailers     User[]        @relation("DistributorToRetailer")
-  transactions  Transaction[]
+  transactions       Transaction[]
+  fundRequests       FundRequest[] @relation("RetailerFundRequests")
+  distributorRequests FundRequest[] @relation("DistributorFundRequests")
   sessions      Session[]
   accounts      Account[]
   createdAt     DateTime      @default(now())
@@ -148,4 +158,22 @@ model CommissionRule {
   updatedAt         DateTime @updatedAt
 
   @@map("commission_rule")
+}
+
+model FundRequest {
+  id            String            @id @default(cuid())
+  retailerId    String
+  retailer      User              @relation("RetailerFundRequests", fields: [retailerId], references: [id], onDelete: Cascade)
+  distributorId String
+  distributor   User              @relation("DistributorFundRequests", fields: [distributorId], references: [id], onDelete: Cascade)
+  amount        Int
+  remarks       String?
+  status        FundRequestStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([retailerId])
+  @@index([distributorId])
+  @@index([status])
+  @@map("fund_request")
 }
